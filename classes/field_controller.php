@@ -1,148 +1,136 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Customfield checkbox multi plugin
+ *
+ * @package   customfield_checkbox_multi
+ * @copyright 2018 Toni Barbera <toni@moodle.com>
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace customfield_checkbox_multi;
 
 defined('MOODLE_INTERNAL') || die;
 
+/**
+ * Field controller for multiselect custom field.
+ *
+ * @package   customfield_checkbox_multi
+ * @copyright 2018 Toni Barbera <toni@moodle.com>
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class field_controller extends \core_customfield\field_controller {
+    /** @var string Plugin type */
     const TYPE = 'multiselect';
 
+    /**
+     * Add specific settings to the field configuration form.
+     *
+     * @param \MoodleQuickForm $mform
+     */
+    #[\Override]
     public function config_form_definition(\MoodleQuickForm $mform) {
-        global $_POST;
-
-        $mform->addElement('header', 'header_specificsettings', get_string('specificsettings', 'customfield_checkbox_multi'));
+        $mform->addElement('header', 'header_specificsettings',
+            get_string('specificsettings', 'customfield_checkbox_multi'));
         $mform->setExpanded('header_specificsettings', true);
 
-        // Try to get submitted options first (for validation errors)
-        $submittedOptions = [];
-        $hasSubmittedData = false;
-
-        // Check if form was submitted and has validation errors
-        if (!empty($_POST) && isset($_POST['configdata']['options'])) {
-            // Get options from the hidden field
-            $submittedOptionsString = $_POST['configdata']['options'];
-            if (!empty($submittedOptionsString)) {
-                $submittedOptions = preg_split("/\s*\n\s*/", trim($submittedOptionsString));
-                $submittedOptions = array_filter($submittedOptions, function($option) {
-                    return trim($option) !== '';
-                });
-                $hasSubmittedData = true;
-            }
+        $submittedconfig = optional_param_array('configdata', null, PARAM_RAW);
+        if (is_array($submittedconfig) && array_key_exists('options', $submittedconfig)) {
+            $submittedoptions = $this->parse_options((string)$submittedconfig['options']);
+        } else {
+            $submittedoptions = $this->get_options();
         }
 
-        // If no submitted data, get existing saved options
-        if (!$hasSubmittedData) {
-            $submittedOptions = $this->get_options();
-        }
+        $defaultarray = $this->parse_options((string)$this->get_configdata_property('defaultvalue'));
+        $optioncount = max(count($submittedoptions), 2);
 
-        // Get existing default values
-        $existingDefaults = $this->get_configdata_property('defaultvalue');
-        $defaultArray = [];
-        if (!empty($existingDefaults)) {
-            $defaultArray = preg_split("/\s*\n\s*/", trim($existingDefaults));
-        }
-
-        // Ensure at least 2 option fields
-        $optioncount = max(count($submittedOptions), 2);
-
-        // Hidden field to store all options
         $mform->addElement('hidden', 'configdata[options]', '');
         $mform->setType('configdata[options]', PARAM_RAW);
-
-        // Hidden field for default values
         $mform->addElement('hidden', 'configdata[defaultvalue]', '');
-        $mform->setType('configdata[defaultvalue]', PARAM_TEXT);
+        $mform->setType('configdata[defaultvalue]', PARAM_RAW);
 
-        // Set default value for hidden field
-        if (!empty($submittedOptions)) {
-            $mform->setDefault('configdata[options]', implode("\n", $submittedOptions));
+        if ($submittedoptions !== []) {
+            $mform->setDefault('configdata[options]', implode("\n", $submittedoptions));
         }
 
-        // Build all options container
-        $allOptionsHtml = '<div id="customfield-options-wrapper" style="max-width: 600px;">';
+        $alloptionshtml = '<div id="customfield-options-wrapper" style="max-width: 600px;">';
+        $alloptionshtml .= '<div id="options-container">';
 
-        // Container for all options
-        $allOptionsHtml .= '<div id="options-container">';
-
-        // Generate option fields with submitted or existing values
         for ($i = 0; $i < $optioncount; $i++) {
-            $optionvalue = isset($submittedOptions[$i]) ? htmlspecialchars($submittedOptions[$i]) : '';
-            $isDefault = in_array($optionvalue, $defaultArray) ? 'checked' : '';
+            $optiontext = $submittedoptions[$i] ?? '';
+            $optionvalue = s($optiontext);
+            $isdefault = in_array($optiontext, $defaultarray, true) ? 'checked' : '';
 
-            $allOptionsHtml .= '<div class="option-item d-flex align-items-center mb-2" data-index="' . $i . '">';
+            $alloptionshtml .= '<div class="option-item d-flex align-items-center mb-2" data-index="' . $i . '">';
+            $alloptionshtml .= '<div class="form-check ml-2 mr-2" style="margin-bottom: 0;">';
+            $alloptionshtml .= '<input type="checkbox" class="form-check-input default-checkbox" ';
+            $alloptionshtml .= 'id="default_' . $i . '" ' . $isdefault . ' data-index="' . $i . '" ';
+            $alloptionshtml .= 'title="' . get_string('default_option', 'customfield_checkbox_multi') . '" />';
+            $alloptionshtml .= '<label class="form-check-label" for="default_' . $i . '" ';
+            $alloptionshtml .= 'style="display: none;"></label>';
+            $alloptionshtml .= '</div>';
 
-            // Add checkbox for default value
-            $allOptionsHtml .= '<div class="form-check ml-2 mr-2" style="margin-bottom: 0;">';
-            $allOptionsHtml .= '<input type="checkbox" class="form-check-input default-checkbox" ';
-            $allOptionsHtml .= 'id="default_' . $i . '" ' . $isDefault . ' ';
-            $allOptionsHtml .= 'data-index="' . $i . '" ';
-            $allOptionsHtml .= 'title="' . get_string('default option', 'customfield_checkbox_multi') . '" />';
-            $allOptionsHtml .= '<label class="form-check-label" for="default_' . $i . '" style="display: none;"></label>';
-            $allOptionsHtml .= '</div>';
-
-            $allOptionsHtml .= '<input type="text" class="form-control option-input" ';
-            $allOptionsHtml .= 'data-index="' . $i . '" ';
-            $allOptionsHtml .= 'value="' . $optionvalue . '" />';
-
-            $allOptionsHtml .= '<button type="button" class="btn btn-danger btn-sm remove-option">';
-            $allOptionsHtml .= '<i class="fa fa-times"></i>';
-            $allOptionsHtml .= '</button>';
-            $allOptionsHtml .= '</div>';
+            $alloptionshtml .= '<input type="text" class="form-control option-input" ';
+            $alloptionshtml .= 'data-index="' . $i . '" value="' . $optionvalue . '" />';
+            $alloptionshtml .= '<button type="button" class="btn btn-danger btn-sm remove-option">';
+            $alloptionshtml .= '<i class="fa fa-times"></i>';
+            $alloptionshtml .= '</button>';
+            $alloptionshtml .= '</div>';
         }
 
-        $allOptionsHtml .= '</div>'; // End options-container
+        $alloptionshtml .= '</div>';
+        $alloptionshtml .= '<div id="options-message" class="text-danger small mt-1" style="display: none;"></div>';
+        $alloptionshtml .= '<div class="mt-2">';
+        $alloptionshtml .= '<button type="button" class="btn btn-secondary btn-sm" id="add-option">';
+        $alloptionshtml .= '<i class="fa fa-plus"></i> ' . get_string('addoptions', 'customfield_checkbox_multi');
+        $alloptionshtml .= '</button>';
+        $alloptionshtml .= '</div>';
+        $alloptionshtml .= '</div>';
 
-        // Message container
-        $allOptionsHtml .= '<div id="options-message" class="text-danger small mt-1" style="display: none;"></div>';
-
-        // Add button
-        $allOptionsHtml .= '<div class="mt-2">';
-        $allOptionsHtml .= '<button type="button" class="btn btn-secondary btn-sm" id="add-option">';
-        $allOptionsHtml .= '<i class="fa fa-plus"></i> ' . get_string('addoptions', 'customfield_checkbox_multi');
-        $allOptionsHtml .= '</button>';
-        $allOptionsHtml .= '</div>';
-
-        $allOptionsHtml .= '</div>'; // End customfield-options-wrapper
-
-        // Add help Label.
-        $mform->addElement('static', 'options_label', get_string('menuoptions', 'customfield_checkbox_multi'). ' ' . "(required)", $allOptionsHtml);
+        $requiredsuffix = ' (' . get_string('required') . ')';
+        $mform->addElement(
+            'static',
+            'options_label',
+            get_string('menuoptions', 'customfield_checkbox_multi') . $requiredsuffix,
+            $alloptionshtml
+        );
         $mform->addHelpButton('options_label', 'menuoptions_help', 'customfield_checkbox_multi');
-//        $mform->addRule('options_label', get_string('errornotenoughoptions', 'customfield_checkbox_multi'), 'required', null, 'server');
-
-        // Add JavaScript
         $mform->addElement('html', $this->get_options_javascript());
     }
 
     /**
-     * Override to properly handle form data after submission
+     * JavaScript for managing options with inline default checkboxes.
+     *
+     * @return string
      */
-    public function config_form_before_set_data(\stdClass $data) {
-        global $_POST;
-
-        parent::config_form_before_set_data($data);
-
-        // If there's submitted data (validation failed), preserve it
-        if (!empty($_POST) && isset($_POST['configdata']['options'])) {
-            $data->configdata['options'] = $_POST['configdata']['options'];
+    private function get_options_javascript(): string {
+        $jsstrings = [
+            'defaultoptiontitle' => get_string('default_option', 'customfield_checkbox_multi'),
+            'errornotenoughoptions' => get_string('errornotenoughoptions', 'customfield_checkbox_multi'),
+        ];
+        $stringsjson = json_encode($jsstrings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        if ($stringsjson === false) {
+            $stringsjson = '{}';
         }
-    }
-
-    /**
-     * JavaScript for managing options with inline default checkbox
-     */
-    private function get_options_javascript() {
-        // Get existing default values
-        $existingDefaults = $this->get_configdata_property('defaultvalue');
-        $defaultArray = [];
-        if (!empty($existingDefaults)) {
-            $defaultArray = preg_split("/\s*\n\s*/", trim($existingDefaults));
-        }
-        $defaultsJson = json_encode($defaultArray);
 
         return <<<EOD
 <script type="text/javascript">
 (function() {
-    // Store existing default values
-    var existingDefaults = {$defaultsJson};
+    var strings = {$stringsjson};
 
     // Simple message display
     function showMessage(message) {
@@ -170,7 +158,7 @@ class field_controller extends \core_customfield\field_controller {
         document.querySelectorAll('.option-item').forEach(function(item) {
             var input = item.querySelector('.option-input');
             var checkbox = item.querySelector('.default-checkbox');
-            
+
             if (input && checkbox) {
                 var value = input.value.trim();
                 if (value !== '' && checkbox.checked) {
@@ -184,8 +172,6 @@ class field_controller extends \core_customfield\field_controller {
             hiddenField.value = selectedDefaults.join('\\n');
         }
 
-        // Update existingDefaults to maintain state
-        existingDefaults = selectedDefaults;
     }
 
     // Update the hidden field with all options
@@ -221,13 +207,13 @@ class field_controller extends \core_customfield\field_controller {
         if (e.target.classList.contains('option-input')) {
             updateHiddenField();
             hideMessage();
-            
+
             // If the option value changes and it was a default, uncheck the checkbox
             var optionItem = e.target.closest('.option-item');
             if (optionItem) {
                 var checkbox = optionItem.querySelector('.default-checkbox');
                 var value = e.target.value.trim();
-                
+
                 // If value is empty or changed, uncheck the default checkbox
                 if (checkbox && value === '') {
                     checkbox.checked = false;
@@ -257,7 +243,7 @@ class field_controller extends \core_customfield\field_controller {
             '<div class="form-check ml-2 mr-2" style="margin-bottom: 0;">' +
             '<input type="checkbox" class="form-check-input default-checkbox" ' +
             'id="default_' + optionIndex + '" data-index="' + optionIndex + '" ' +
-            'title="Default value" />' +
+            'title="' + strings.defaultoptiontitle + '" />' +
             '<label class="form-check-label" for="default_' + optionIndex + '" style="display: none;"></label>' +
             '</div>' +
             '<input type="text" class="form-control option-input" ' +
@@ -316,7 +302,7 @@ class field_controller extends \core_customfield\field_controller {
 
                 updateHiddenField();
             } else {
-                showMessage('You must keep at least 2 options');
+                showMessage(strings.errornotenoughoptions);
             }
         });
     }
@@ -386,7 +372,7 @@ class field_controller extends \core_customfield\field_controller {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-left: 0.5rem; 
+    margin-left: 0.5rem;
 }
 
 #all-options-container {
@@ -455,14 +441,26 @@ EOD;
      * Get options array
      */
     public function get_options(): array {
-        $options_data = $this->get_configdata_property('options');
+        return $this->parse_options((string)$this->get_configdata_property('options'));
+    }
 
-        if (empty($options_data)) {
-            return array();
+    /**
+     * Split multiline options into a clean array.
+     *
+     * @param string $optionsstring
+     * @return array
+     */
+    private function parse_options(string $optionsstring): array {
+        if (trim($optionsstring) === '') {
+            return [];
         }
 
-        $options = preg_split("/\s*\n\s*/", trim($options_data));
-        $options = array_filter($options, function($option) {
+        $options = preg_split("/\s*\n\s*/", trim($optionsstring));
+        if ($options === false) {
+            return [];
+        }
+
+        $options = array_filter($options, static function(string $option): bool {
             return trim($option) !== '';
         });
 
@@ -470,60 +468,57 @@ EOD;
     }
 
     /**
-     * Static helper to get options
+     * Static helper to get options.
+     *
+     * @param \core_customfield\field_controller $field
+     * @return array
      */
     public static function get_options_array(\core_customfield\field_controller $field): array {
         return $field->get_options();
     }
 
     /**
-     * Validate the configuration form
+     * Validate the data on the field configuration form.
+     *
+     * @param array $data from the add/edit profile field form
+     * @param array $files
+     * @return array associative array of error messages
      */
+    #[\Override]
     public function config_form_validation(array $data, $files = array()): array {
-        $errors = [];
+        $errors = parent::config_form_validation($data, $files);
 
         $options = [];
-        if (isset($data['configdata']['options'])) {
-            $options_string = trim($data['configdata']['options']);
-            if (!empty($options_string)) {
-                $options = preg_split("/\s*\n\s*/", $options_string);
-                $options = array_filter($options, function($option) {
-                    return trim($option) !== '';
-                });
-            }
+        if (!empty($data['configdata']['options'])) {
+            $options = $this->parse_options(trim($data['configdata']['options']));
         }
 
-        // Check minimum number of options
         if (count($options) < 2) {
             $errors['options_label'] = get_string('errornotenoughoptions', 'customfield_checkbox_multi');
         }
 
-        // Check for duplicate options
-        $uniqueOptions = array_unique(array_map('trim', $options));
-        if (count($uniqueOptions) < count($options)) {
-            $errors['options_label'] = 'Duplicate options are not allowed';
+        $uniqueoptions = array_unique(array_map('trim', $options));
+        if (count($uniqueoptions) < count($options)) {
+            $errors['options_label'] = get_string('errorduplicateoptions', 'customfield_checkbox_multi');
         }
 
-        // Validate default values
         if (!empty($data['configdata']['defaultvalue'])) {
-            $defaultvalue = trim($data['configdata']['defaultvalue']);
+            $defaultvalues = $this->parse_options(trim($data['configdata']['defaultvalue']));
+            $cleanoptions = array_map('trim', $options);
 
-            $defaultValues = preg_split("/\s*\n\s*/", $defaultvalue);
-            $defaultValues = array_filter($defaultValues, function($val) {
-                return trim($val) !== '';
-            });
-
-            $cleanOptions = array_map('trim', $options);
-
-            foreach ($defaultValues as $val) {
-                $val = trim($val);
-                if (!empty($val) && !in_array($val, $cleanOptions)) {
-                    $errorMessage = get_string('errordefaultvaluenotinlist', 'customfield_checkbox_multi', $val);
-                    $errors['options_label'] = $errorMessage;
+            foreach ($defaultvalues as $value) {
+                $value = trim($value);
+                if ($value !== '' && !in_array($value, $cleanoptions, true)) {
+                    $errors['options_label'] = get_string(
+                        'errordefaultvaluenotinlist',
+                        'customfield_checkbox_multi',
+                        $value
+                    );
                     break;
                 }
             }
         }
+
         return $errors;
     }
 }

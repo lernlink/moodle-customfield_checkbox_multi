@@ -16,7 +16,8 @@
 
 /**
  * Customfield checkbox multi plugin
- * @package   customfield_checkbox
+ *
+ * @package   customfield_checkbox_multi
  * @copyright 2018 Toni Barbera <toni@moodle.com>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -24,20 +25,23 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['defaultvalue'] = 'Default values';
-$string['defaultvalue_help'] = 'Enter default values, one per line. These options will be pre-selected when creating new instances. For backward compatibility, you can also use comma-separated values.';
-$string['defaultvalue_note'] = 'You can enter default values one per line, or use comma-separated values for backward compatibility.';
+$string['defaultvalue_help'] = 'Enter default values, one per line. These options will be pre-selected when creating new '
+    . 'instances. For backward compatibility, you can also use comma-separated values.';
+$string['defaultvalue_note'] = 'You can enter default values one per line, or use comma-separated values for backward '
+    . 'compatibility.';
 $string['errorconfigunique'] = 'The multiselect field cannot be defined as unique.';
 $string['errordefaultvaluenotinlist'] = 'The default value "{$a}" is not one of the available options.';
 $string['errornotenoughoptions'] = 'You must provide at least two options.';
 $string['menuoptions'] = 'Menu options';
 $string['pluginname'] = 'Multi-select';
-$string['privacy:metadata'] = 'The Multi-select field type plugin doesn\'t store any personal data; it uses tables defined in core.';
+$string['privacy:metadata'] = 'The Multi-select field type plugin doesn\'t store any personal data; it uses tables '
+    . 'defined in core.';
 $string['specificsettings'] = 'Multi-select field settings';
 $string['option'] = 'Option';
 $string['menuoptionsdesc'] = 'Enter one option per field. You can add or remove options as needed.';
 $string['errorduplicateoptions'] = 'Duplicate options are not allowed';
-$string['default option'] = 'default option';
-$string['addoptions'] = ' Add options';
+$string['default_option'] = 'Default option';
+$string['addoptions'] = 'Add options';
 $string['menuoptions_help_help'] = 'Check the checkbox before option to make it a default option.';
 $string['menuoptions_help'] = 'Default value';
 $string['contactadminforchange'] = 'Please contact the administrator for this change.';
