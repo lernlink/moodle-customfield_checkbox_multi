@@ -1,0 +1,70 @@
+#customfield-options-wrapper.customfield-checkbox-multi-wrapper {
+    max-width: 600px;
+    width: 100%;
+}
+
+#options-container.customfield-checkbox-multi-options-container {
+    width: 100%;
+}
+
+.customfield-checkbox-multi-option-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.customfield-checkbox-multi-option-input {
+    flex: 1;
+    width: 100%;
+}
+
+.customfield-checkbox-multi-check {
+    margin: 0 0.5rem;
+    min-height: auto;
+}
+
+.customfield-checkbox-multi-check .default-checkbox {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.customfield-checkbox-multi-remove-option {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.5rem;
+}
+
+.customfield-checkbox-multi-actions {
+    margin-top: 0.5rem;
+}
+
+.customfield-checkbox-multi-message {
+    display: none;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+}
+
+#fitem_id_options_label .form-inline.felement {
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+}
+
+.customfield-checkbox-multi-option-item:hover .customfield-checkbox-multi-option-input {
+    border-color: #80bdff;
+}
+
+@media (max-width: 768px) {
+    #fitem_id_options_label .form-group.row .col-md-3,
+    #fitem_id_options_label .form-group.row .col-md-9 {
+        max-width: 100%;
+        flex: 0 0 100%;
+    }
+}

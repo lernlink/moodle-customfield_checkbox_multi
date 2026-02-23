@@ -67,34 +67,37 @@ class field_controller extends \core_customfield\field_controller {
             $mform->setDefault('configdata[options]', implode("\n", $submittedoptions));
         }
 
-        $alloptionshtml = '<div id="customfield-options-wrapper" style="max-width: 600px;">';
-        $alloptionshtml .= '<div id="options-container">';
+        $alloptionshtml = '<div id="customfield-options-wrapper" class="customfield-checkbox-multi-wrapper">';
+        $alloptionshtml .= '<div id="options-container" class="customfield-checkbox-multi-options-container">';
 
         for ($i = 0; $i < $optioncount; $i++) {
             $optiontext = $submittedoptions[$i] ?? '';
             $optionvalue = s($optiontext);
             $isdefault = in_array($optiontext, $defaultarray, true) ? 'checked' : '';
+            $defaultoptiontext = s(get_string('default_option', 'customfield_checkbox_multi'));
 
-            $alloptionshtml .= '<div class="option-item d-flex align-items-center mb-2" data-index="' . $i . '">';
-            $alloptionshtml .= '<div class="form-check ml-2 mr-2" style="margin-bottom: 0;">';
+            $alloptionshtml .= '<div class="option-item customfield-checkbox-multi-option-item" data-index="' . $i . '">';
+            $alloptionshtml .= '<div class="form-check customfield-checkbox-multi-check">';
             $alloptionshtml .= '<input type="checkbox" class="form-check-input default-checkbox" ';
             $alloptionshtml .= 'id="default_' . $i . '" ' . $isdefault . ' data-index="' . $i . '" ';
-            $alloptionshtml .= 'title="' . get_string('default_option', 'customfield_checkbox_multi') . '" />';
-            $alloptionshtml .= '<label class="form-check-label" for="default_' . $i . '" ';
-            $alloptionshtml .= 'style="display: none;"></label>';
+            $alloptionshtml .= 'title="' . $defaultoptiontext . '" />';
+            $alloptionshtml .= '<label class="form-check-label accesshide" for="default_' . $i . '">';
+            $alloptionshtml .= $defaultoptiontext;
+            $alloptionshtml .= '</label>';
             $alloptionshtml .= '</div>';
 
-            $alloptionshtml .= '<input type="text" class="form-control option-input" ';
+            $alloptionshtml .= '<input type="text" class="form-control option-input customfield-checkbox-multi-option-input" ';
             $alloptionshtml .= 'data-index="' . $i . '" value="' . $optionvalue . '" />';
-            $alloptionshtml .= '<button type="button" class="btn btn-danger btn-sm remove-option">';
+            $alloptionshtml .= '<button type="button" class="btn btn-danger btn-sm remove-option ';
+            $alloptionshtml .= 'customfield-checkbox-multi-remove-option">';
             $alloptionshtml .= '<i class="fa fa-times"></i>';
             $alloptionshtml .= '</button>';
             $alloptionshtml .= '</div>';
         }
 
         $alloptionshtml .= '</div>';
-        $alloptionshtml .= '<div id="options-message" class="text-danger small mt-1" style="display: none;"></div>';
-        $alloptionshtml .= '<div class="mt-2">';
+        $alloptionshtml .= '<div id="options-message" class="text-danger small customfield-checkbox-multi-message"></div>';
+        $alloptionshtml .= '<div class="customfield-checkbox-multi-actions">';
         $alloptionshtml .= '<button type="button" class="btn btn-secondary btn-sm" id="add-option">';
         $alloptionshtml .= '<i class="fa fa-plus"></i> ' . get_string('addoptions', 'customfield_checkbox_multi');
         $alloptionshtml .= '</button>';
@@ -109,336 +112,31 @@ class field_controller extends \core_customfield\field_controller {
             $alloptionshtml
         );
         $mform->addHelpButton('options_label', 'menuoptions_help', 'customfield_checkbox_multi');
-        $mform->addElement('html', $this->get_options_javascript());
+
+        $this->initialise_options_editor();
     }
 
     /**
-     * JavaScript for managing options with inline default checkboxes.
-     *
-     * @return string
+     * Load AMD module for options editor.
      */
-    private function get_options_javascript(): string {
-        $jsstrings = [
-            'defaultoptiontitle' => get_string('default_option', 'customfield_checkbox_multi'),
-            'errornotenoughoptions' => get_string('errornotenoughoptions', 'customfield_checkbox_multi'),
-        ];
-        $stringsjson = json_encode($jsstrings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-        if ($stringsjson === false) {
-            $stringsjson = '{}';
-        }
+    private function initialise_options_editor(): void {
+        global $PAGE;
 
-        return <<<EOD
-<script type="text/javascript">
-(function() {
-    var strings = {$stringsjson};
-
-    // Simple message display
-    function showMessage(message) {
-        var messageDiv = document.getElementById('options-message');
-        if (messageDiv) {
-            messageDiv.textContent = message;
-            messageDiv.style.display = 'block';
-
-            setTimeout(function() {
-                messageDiv.style.display = 'none';
-            }, 3000);
-        }
-    }
-
-    function hideMessage() {
-        var messageDiv = document.getElementById('options-message');
-        if (messageDiv) {
-            messageDiv.style.display = 'none';
-        }
-    }
-
-    // Update default value hidden field based on checkbox selections
-    function updateDefaultHiddenField() {
-        var selectedDefaults = [];
-        document.querySelectorAll('.option-item').forEach(function(item) {
-            var input = item.querySelector('.option-input');
-            var checkbox = item.querySelector('.default-checkbox');
-
-            if (input && checkbox) {
-                var value = input.value.trim();
-                if (value !== '' && checkbox.checked) {
-                    selectedDefaults.push(value);
-                }
-            }
-        });
-
-        var hiddenField = document.querySelector('input[name="configdata[defaultvalue]"]');
-        if (hiddenField) {
-            hiddenField.value = selectedDefaults.join('\\n');
-        }
-
-    }
-
-    // Update the hidden field with all options
-    function updateHiddenField() {
-        var options = [];
-        document.querySelectorAll('.option-input').forEach(function(input) {
-            var value = input.value.trim();
-            options.push(value);
-        });
-
-        while (options.length > 0 && options[options.length - 1] === '') {
-            options.pop();
-        }
-
-        var hiddenField = document.querySelector('input[name="configdata[options]"]');
-        if (hiddenField) {
-            hiddenField.value = options.join('\\n');
-        }
-
-        // Also update default values when options change
-        updateDefaultHiddenField();
-    }
-
-    // Handle checkbox changes
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('default-checkbox')) {
-            updateDefaultHiddenField();
-        }
-    });
-
-    // Update hidden field whenever an option changes
-    document.addEventListener('input', function(e) {
-        if (e.target.classList.contains('option-input')) {
-            updateHiddenField();
-            hideMessage();
-
-            // If the option value changes and it was a default, uncheck the checkbox
-            var optionItem = e.target.closest('.option-item');
-            if (optionItem) {
-                var checkbox = optionItem.querySelector('.default-checkbox');
-                var value = e.target.value.trim();
-
-                // If value is empty or changed, uncheck the default checkbox
-                if (checkbox && value === '') {
-                    checkbox.checked = false;
-                    updateDefaultHiddenField();
-                }
-            }
-        }
-    });
-
-    document.addEventListener('blur', function(e) {
-        if (e.target.classList.contains('option-input')) {
-            updateHiddenField();
-        }
-    }, true);
-
-    var optionIndex = document.querySelectorAll('.option-input').length;
-
-    // Add option functionality
-    document.getElementById('add-option').addEventListener('click', function() {
-        var container = document.getElementById('options-container');
-
-        var newOption = document.createElement('div');
-        newOption.className = 'option-item d-flex align-items-center mb-2';
-        newOption.setAttribute('data-index', optionIndex);
-
-        newOption.innerHTML =
-            '<div class="form-check ml-2 mr-2" style="margin-bottom: 0;">' +
-            '<input type="checkbox" class="form-check-input default-checkbox" ' +
-            'id="default_' + optionIndex + '" data-index="' + optionIndex + '" ' +
-            'title="' + strings.defaultoptiontitle + '" />' +
-            '<label class="form-check-label" for="default_' + optionIndex + '" style="display: none;"></label>' +
-            '</div>' +
-            '<input type="text" class="form-control option-input" ' +
-            'data-index="' + optionIndex + '" value="" />' +
-            '<button type="button" class="btn btn-danger btn-sm remove-option">' +
-            '<i class="fa fa-times"></i>' +
-            '</button>';
-
-        container.appendChild(newOption);
-
-        var newInput = newOption.querySelector('.option-input');
-        newInput.addEventListener('input', function() {
-            updateHiddenField();
-            hideMessage();
-        });
-        newInput.addEventListener('blur', function() {
-            updateHiddenField();
-        });
-
-        // Focus on the new input
-        newInput.focus();
-
-        var deleteBtn = newOption.querySelector('.remove-option');
-        attachDeleteEvent(deleteBtn);
-
-        optionIndex++;
-
-        // Update hidden field immediately
-        updateHiddenField();
-    });
-
-    // Delete functionality
-    function attachDeleteEvent(button) {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            var optionItem = this.closest('.option-item');
-            var totalOptions = document.querySelectorAll('.option-input').length;
-
-            if (totalOptions > 2) {
-                optionItem.remove();
-
-                // Re-index remaining options
-                var items = document.querySelectorAll('.option-item');
-                items.forEach(function(item, index) {
-                    item.setAttribute('data-index', index);
-                    var input = item.querySelector('.option-input');
-                    if (input) {
-                        input.setAttribute('data-index', index);
-                    }
-                    var checkbox = item.querySelector('.default-checkbox');
-                    if (checkbox) {
-                        checkbox.setAttribute('data-index', index);
-                        checkbox.id = 'default_' + index;
-                    }
-                });
-
-                updateHiddenField();
-            } else {
-                showMessage(strings.errornotenoughoptions);
-            }
-        });
-    }
-
-    // Attach delete events to existing buttons
-    document.querySelectorAll('.remove-option').forEach(function(button) {
-        attachDeleteEvent(button);
-    });
-
-    // Initialize on load
-    window.addEventListener('load', function() {
-        updateHiddenField();
-    });
-
-    // Also update immediately
-    updateHiddenField();
-
-    // Update before form submission
-    var form = document.querySelector('form');
-    if (form) {
-        form.addEventListener('submit', function() {
-            updateHiddenField();
-            updateDefaultHiddenField();
-            return true;
-        });
-    }
-})();
-</script>
-
-<style>
-#customfield-options-wrapper {
-    width: 100%;
-}
-
-#options-container {
-    width: 100%;
-}
-
-.option-item {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    margin-bottom: 0.5rem;
-}
-
-.option-item .option-input {
-    flex: 1;
-    width: 100%;
-}
-
-.option-item .default-checkbox {
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-}
-
-.option-item .form-check {
-    margin: 0;
-    min-height: auto;
-}
-
-.option-item .remove-option {
-    width: 38px;
-    height: 38px;
-    padding: 0;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 0.5rem;
-}
-
-#all-options-container {
-    position: relative;
-}
-
-#all-options-container .option-item:first-child {
-    margin-top: 0;
-}
-
-#add-option {
-    font-size: 0.9rem;
-}
-
-.option-item:hover .option-input {
-    border-color: #80bdff;
-}
-
-.default-checkbox[title]:hover::after {
-    content: attr(title);
-    position: absolute;
-    z-index: 1000;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 4px 8px;
-    font-size: 12px;
-    border-radius: 4px;
-    white-space: nowrap;
-    margin-top: -30px;
-    margin-left: -10px;
-}
-
-#options-message {
-    font-size: 0.875rem;
-    color: #dc3545;
-}
-
-#fitem_id_options_label .form-inline.felement {
-    min-height: 38px;
-    display: flex;
-    align-items: center;
-}
-
-.ml-2 { margin-left: 0.5rem !important; }
-.mr-2 { margin-right: 0.5rem !important; }
-.mb-2 { margin-bottom: 0.5rem !important; }
-.mt-2 { margin-top: 0.5rem !important; }
-.mt-1 { margin-top: 0.25rem !important; }
-
-@media (max-width: 768px) {
-    #all-options-container {
-        margin-top: 0 !important;
-    }
-
-    .form-group.row .col-md-3,
-    .form-group.row .col-md-9 {
-        max-width: 100%;
-        flex: 0 0 100%;
-    }
-}
-</style>
-EOD;
+        $PAGE->requires->js_call_amd(
+            'customfield_checkbox_multi/options_editor',
+            'init',
+            [[
+                'defaultoptiontitle' => get_string('default_option', 'customfield_checkbox_multi'),
+                'defaultoptionlabel' => get_string('default_option', 'customfield_checkbox_multi'),
+                'errornotenoughoptions' => get_string('errornotenoughoptions', 'customfield_checkbox_multi'),
+            ]]
+        );
     }
 
     /**
-     * Get options array
+     * Get options array.
+     *
+     * @return array
      */
     public function get_options(): array {
         return $this->parse_options((string)$this->get_configdata_property('options'));
