@@ -1,9 +1,9 @@
-#customfield-options-wrapper.customfield-checkbox-multi-wrapper {
+.customfield-checkbox-multi-wrapper {
     max-width: 600px;
     width: 100%;
 }
 
-#options-container.customfield-checkbox-multi-options-container {
+.customfield-checkbox-multi-options-container {
     width: 100%;
 }
 

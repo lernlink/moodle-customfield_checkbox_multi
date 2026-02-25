@@ -49,8 +49,11 @@ class field_controller extends \core_customfield\field_controller {
         $mform->setExpanded('header_specificsettings', true);
 
         $submittedconfig = optional_param_array('configdata', null, PARAM_RAW);
+        $submittedoptionsui = optional_param_array('configdata_options_ui', null, PARAM_RAW);
         if (is_array($submittedconfig) && array_key_exists('options', $submittedconfig)) {
-            $submittedoptions = $this->parse_options((string)$submittedconfig['options']);
+            $submittedoptions = $this->parse_submitted_options($submittedconfig['options']);
+        } elseif (is_array($submittedoptionsui)) {
+            $submittedoptions = $this->parse_options_array($submittedoptionsui);
         } else {
             $submittedoptions = $this->get_options();
         }
@@ -67,8 +70,8 @@ class field_controller extends \core_customfield\field_controller {
             $mform->setDefault('configdata[options]', implode("\n", $submittedoptions));
         }
 
-        $alloptionshtml = '<div id="customfield-options-wrapper" class="customfield-checkbox-multi-wrapper">';
-        $alloptionshtml .= '<div id="options-container" class="customfield-checkbox-multi-options-container">';
+        $alloptionshtml = '<div class="customfield-checkbox-multi-wrapper">';
+        $alloptionshtml .= '<div class="customfield-checkbox-multi-options-container">';
 
         for ($i = 0; $i < $optioncount; $i++) {
             $optiontext = $submittedoptions[$i] ?? '';
@@ -87,7 +90,7 @@ class field_controller extends \core_customfield\field_controller {
             $alloptionshtml .= '</div>';
 
             $alloptionshtml .= '<input type="text" class="form-control option-input customfield-checkbox-multi-option-input" ';
-            $alloptionshtml .= 'data-index="' . $i . '" value="' . $optionvalue . '" />';
+            $alloptionshtml .= 'data-index="' . $i . '" name="configdata_options_ui[]" value="' . $optionvalue . '" />';
             $alloptionshtml .= '<button type="button" class="btn btn-danger btn-sm remove-option ';
             $alloptionshtml .= 'customfield-checkbox-multi-remove-option">';
             $alloptionshtml .= '<i class="fa fa-times"></i>';
@@ -96,9 +99,9 @@ class field_controller extends \core_customfield\field_controller {
         }
 
         $alloptionshtml .= '</div>';
-        $alloptionshtml .= '<div id="options-message" class="text-danger small customfield-checkbox-multi-message"></div>';
+        $alloptionshtml .= '<div class="text-danger small customfield-checkbox-multi-message"></div>';
         $alloptionshtml .= '<div class="customfield-checkbox-multi-actions">';
-        $alloptionshtml .= '<button type="button" class="btn btn-secondary btn-sm" id="add-option">';
+        $alloptionshtml .= '<button type="button" class="btn btn-secondary btn-sm customfield-checkbox-multi-add-option">';
         $alloptionshtml .= '<i class="fa fa-plus"></i> ' . get_string('addoptions', 'customfield_checkbox_multi');
         $alloptionshtml .= '</button>';
         $alloptionshtml .= '</div>';
@@ -113,6 +116,14 @@ class field_controller extends \core_customfield\field_controller {
         );
         $mform->addHelpButton('options_label', 'menuoptions_help', 'customfield_checkbox_multi');
 
+    }
+
+    /**
+     * Register dynamic-form JavaScript requirements.
+     *
+     * @param \MoodleQuickForm $mform
+     */
+    public function config_form_dynamic_requirements(\MoodleQuickForm $_mform): void {
         $this->initialise_options_editor();
     }
 
@@ -139,7 +150,8 @@ class field_controller extends \core_customfield\field_controller {
      * @return array
      */
     public function get_options(): array {
-        return $this->parse_options((string)$this->get_configdata_property('options'));
+        $options = $this->get_configdata_property('options');
+        return $this->parse_submitted_options($options);
     }
 
     /**
@@ -166,6 +178,37 @@ class field_controller extends \core_customfield\field_controller {
     }
 
     /**
+     * Parse options from array input.
+     *
+     * @param array $options
+     * @return array
+     */
+    private function parse_options_array(array $options): array {
+        $cleanoptions = array_map(static function($option): string {
+            return trim((string)$option);
+        }, $options);
+
+        $cleanoptions = array_filter($cleanoptions, static function(string $option): bool {
+            return $option !== '';
+        });
+
+        return array_values($cleanoptions);
+    }
+
+    /**
+     * Parse options from either string or array form submissions.
+     *
+     * @param mixed $options
+     * @return array
+     */
+    private function parse_submitted_options($options): array {
+        if (is_array($options)) {
+            return $this->parse_options_array($options);
+        }
+        return $this->parse_options((string)$options);
+    }
+
+    /**
      * Static helper to get options.
      *
      * @param \core_customfield\field_controller $field
@@ -187,8 +230,14 @@ class field_controller extends \core_customfield\field_controller {
         $errors = parent::config_form_validation($data, $files);
 
         $options = [];
-        if (!empty($data['configdata']['options'])) {
-            $options = $this->parse_options(trim($data['configdata']['options']));
+        if (isset($data['configdata']['options'])) {
+            $options = $this->parse_submitted_options($data['configdata']['options']);
+        }
+        if ($options === []) {
+            $submittedoptionsui = optional_param_array('configdata_options_ui', null, PARAM_RAW);
+            if (is_array($submittedoptionsui)) {
+                $options = $this->parse_options_array($submittedoptionsui);
+            }
         }
 
         if (count($options) < 2) {
