@@ -18,7 +18,7 @@
  * Customfield checkbox multi plugin
  *
  * @package   customfield_checkbox_multi
- * @copyright 2018 Toni Barbera <toni@moodle.com>
+ * @copyright  2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -32,8 +32,10 @@ $string['defaultvalue_note'] = 'You can enter default values one per line, or us
 $string['errorconfigunique'] = 'The multiselect field cannot be defined as unique.';
 $string['errordefaultvaluenotinlist'] = 'The default value "{$a}" is not one of the available options.';
 $string['errornotenoughoptions'] = 'You must provide at least two options.';
+$string['errorrequiredatleastone'] = 'Please select at least one option.';
 $string['menuoptions'] = 'Menu options';
 $string['pluginname'] = 'Multi-select';
+$string['pluginname_help'] = 'Store multiple values by selecting one or more checkboxes.';
 $string['privacy:metadata'] = 'The Multi-select field type plugin doesn\'t store any personal data; it uses tables '
     . 'defined in core.';
 $string['specificsettings'] = 'Multi-select field settings';
@@ -42,6 +44,5 @@ $string['menuoptionsdesc'] = 'Enter one option per field. You can add or remove 
 $string['errorduplicateoptions'] = 'Duplicate options are not allowed';
 $string['default_option'] = 'Default option';
 $string['addoptions'] = 'Add options';
-$string['menuoptions_help_help'] = 'Check the checkbox before option to make it a default option.';
-$string['menuoptions_help'] = 'Default value';
+$string['menuoptions_help'] = 'Enter one option per row and mark default options with the checkbox at the left.';
 $string['contactadminforchange'] = 'Please contact the administrator for this change.';

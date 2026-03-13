@@ -30,7 +30,7 @@ defined('MOODLE_INTERNAL') || die;
  * Field controller for multiselect custom field.
  *
  * @package   customfield_checkbox_multi
- * @copyright 2018 Toni Barbera <toni@moodle.com>
+ * @copyright  2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class field_controller extends \core_customfield\field_controller {
@@ -58,7 +58,7 @@ class field_controller extends \core_customfield\field_controller {
             $submittedoptions = $this->get_options();
         }
 
-        $defaultarray = $this->parse_options((string)$this->get_configdata_property('defaultvalue'));
+        $defaultarray = $this->parse_default_values((string)$this->get_configdata_property('defaultvalue'));
         $optioncount = max(count($submittedoptions), 2);
 
         $mform->addElement('hidden', 'configdata[options]', '');
@@ -114,7 +114,7 @@ class field_controller extends \core_customfield\field_controller {
             get_string('menuoptions', 'customfield_checkbox_multi') . $requiredsuffix,
             $alloptionshtml
         );
-        $mform->addHelpButton('options_label', 'menuoptions_help', 'customfield_checkbox_multi');
+        $mform->addHelpButton('options_label', 'menuoptions', 'customfield_checkbox_multi');
 
     }
 
@@ -209,6 +209,29 @@ class field_controller extends \core_customfield\field_controller {
     }
 
     /**
+     * Parse default values from newline or comma-separated format.
+     *
+     * @param string $defaultvaluestring
+     * @return array
+     */
+    private function parse_default_values(string $defaultvaluestring): array {
+        if (trim($defaultvaluestring) === '') {
+            return [];
+        }
+
+        $values = preg_split("/\\s*(?:\\n|,)\\s*/", trim($defaultvaluestring));
+        if ($values === false) {
+            return [];
+        }
+
+        $values = array_filter($values, static function(string $value): bool {
+            return trim($value) !== '';
+        });
+
+        return array_values($values);
+    }
+
+    /**
      * Static helper to get options.
      *
      * @param \core_customfield\field_controller $field
@@ -233,11 +256,8 @@ class field_controller extends \core_customfield\field_controller {
         if (isset($data['configdata']['options'])) {
             $options = $this->parse_submitted_options($data['configdata']['options']);
         }
-        if ($options === []) {
-            $submittedoptionsui = optional_param_array('configdata_options_ui', null, PARAM_RAW);
-            if (is_array($submittedoptionsui)) {
-                $options = $this->parse_options_array($submittedoptionsui);
-            }
+        if ($options === [] && isset($data['configdata_options_ui']) && is_array($data['configdata_options_ui'])) {
+            $options = $this->parse_options_array($data['configdata_options_ui']);
         }
 
         if (count($options) < 2) {
@@ -250,7 +270,7 @@ class field_controller extends \core_customfield\field_controller {
         }
 
         if (!empty($data['configdata']['defaultvalue'])) {
-            $defaultvalues = $this->parse_options(trim($data['configdata']['defaultvalue']));
+            $defaultvalues = $this->parse_default_values(trim($data['configdata']['defaultvalue']));
             $cleanoptions = array_map('trim', $options);
 
             foreach ($defaultvalues as $value) {

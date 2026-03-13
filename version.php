@@ -18,12 +18,12 @@
  * Customfield checkbox plugin
  *
  * @package   customfield_checkbox_multi
- * @copyright 2018 Toni Barbera <toni@moodle.com>
+ * @copyright  2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'customfield_checkbox_multi';
-$plugin->version   = 2025121501;
+$plugin->version   = 2026030300;
 $plugin->requires  = 2024100700;

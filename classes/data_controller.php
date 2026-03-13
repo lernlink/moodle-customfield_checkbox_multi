@@ -30,7 +30,7 @@ defined('MOODLE_INTERNAL') || die;
  * Data controller for multiselect custom field.
  *
  * @package   customfield_checkbox_multi
- * @copyright 2018 Toni Barbera <toni@moodle.com>
+ * @copyright  2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class data_controller extends \core_customfield\data_controller {
@@ -59,7 +59,7 @@ class data_controller extends \core_customfield\data_controller {
 
         $options = $this->get_field()->get_options();
         $defaultvaluesarray = [];
-        $values = preg_split("/\s*\n\s*/", trim($defaultvalue));
+        $values = preg_split("/\s*(?:\n|,)\s*/", trim($defaultvalue));
 
         if ($values === false) {
             return '';
@@ -107,13 +107,43 @@ class data_controller extends \core_customfield\data_controller {
             $mform->addElement('checkbox', $elementname . '[' . $key . ']', '', $formattedoption);
         }
 
-        if ($field->get_configdata_property('required')) {
-            foreach ($options as $key => $option) {
-                if (trim($option) !== '') {
-                    $mform->addRule($elementname . '[' . $key . ']', null, 'required', null, 'client');
+    }
+
+    /**
+     * Validate submitted data.
+     *
+     * @param array $data
+     * @param array $files
+     * @return array
+     */
+    #[\Override]
+    public function instance_form_validation(array $data, array $files): array {
+        $errors = parent::instance_form_validation($data, $files);
+
+        if (!$this->get_field()->get_configdata_property('required')) {
+            return $errors;
+        }
+
+        $elementname = $this->get_form_element_name();
+        $submittedvalues = $data[$elementname] ?? [];
+        $hasselection = false;
+
+        if (is_array($submittedvalues)) {
+            foreach ($submittedvalues as $checked) {
+                if (!empty($checked)) {
+                    $hasselection = true;
+                    break;
                 }
             }
+        } else if (!empty($submittedvalues)) {
+            $hasselection = true;
         }
+
+        if (!$hasselection) {
+            $errors[$elementname . '[0]'] = get_string('errorrequiredatleastone', 'customfield_checkbox_multi');
+        }
+
+        return $errors;
     }
 
     /**
@@ -198,17 +228,59 @@ class data_controller extends \core_customfield\data_controller {
     }
 
     /**
+     * Returns value in a human-readable format.
+     *
+     * @return string|null
+     */
+    #[\Override]
+    public function export_value() {
+        $value = $this->get_value();
+        if ($this->is_empty($value)) {
+            return null;
+        }
+
+        $selectedvalues = [];
+        if ($this->get('id')) {
+            $selectedvalues = $this->normalise_values_for_storage($value);
+        } else {
+            $options = $this->get_field()->get_options();
+            foreach (explode(',', (string)$value) as $index) {
+                $cleanindex = trim($index);
+                if ($cleanindex === '' || !is_numeric($cleanindex)) {
+                    continue;
+                }
+                $optionindex = (int)$cleanindex;
+                if (array_key_exists($optionindex, $options)) {
+                    $selectedvalues[] = $options[$optionindex];
+                }
+            }
+        }
+
+        if ($selectedvalues === []) {
+            return null;
+        }
+
+        $context = $this->get_field()->get_handler()->get_configuration_context();
+        $selectedvalues = array_map(static function(string $option) use ($context): string {
+            return format_string($option, true, ['context' => $context]);
+        }, $selectedvalues);
+
+        return implode(', ', $selectedvalues);
+    }
+
+    /**
      * Set value for current data field.
      *
      * @param mixed $value
      * @return \core_customfield\data
      */
     public function set_value($value) {
-        if (is_array($value)) {
-            $encoded = json_encode(array_values($value));
-            $value = $encoded === false ? '[]' : $encoded;
+        $normalisedvalues = $this->normalise_values_for_storage($value);
+        $encoded = json_encode($normalisedvalues);
+        if ($encoded === false) {
+            $encoded = '[]';
         }
-        return $this->set($this->datafield(), $value);
+        return $this->set($this->datafield(), $encoded);
     }
 
     /**
@@ -219,6 +291,62 @@ class data_controller extends \core_customfield\data_controller {
      */
     #[\Override]
     protected function is_empty($value): bool {
-        return trim((string)$value) === '';
+        if (is_array($value)) {
+            return $value === [];
+        }
+
+        $stringvalue = trim((string)$value);
+        if ($stringvalue === '') {
+            return true;
+        }
+
+        $decoded = json_decode($stringvalue, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return $decoded === [];
+        }
+
+        return false;
+    }
+
+    /**
+     * Convert supported input formats into a clean list of values.
+     *
+     * @param mixed $value
+     * @return array
+     */
+    private function normalise_values_for_storage($value): array {
+        if (is_array($value)) {
+            return $this->filter_values($value);
+        }
+
+        $stringvalue = trim((string)$value);
+        if ($stringvalue === '') {
+            return [];
+        }
+
+        $decoded = json_decode($stringvalue, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return $this->filter_values($decoded);
+        }
+
+        return $this->filter_values(explode(',', $stringvalue));
+    }
+
+    /**
+     * Remove empty values and normalise indexes.
+     *
+     * @param array $values
+     * @return array
+     */
+    private function filter_values(array $values): array {
+        $cleanvalues = array_map(static function($value): string {
+            return trim((string)$value);
+        }, $values);
+
+        $cleanvalues = array_filter($cleanvalues, static function(string $value): bool {
+            return $value !== '';
+        });
+
+        return array_values($cleanvalues);
     }
 }
