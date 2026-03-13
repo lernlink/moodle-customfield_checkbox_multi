@@ -15,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Customfield checkbox plugin
+ * Customfield checkbox multi plugin
  *
  * @package   customfield_checkbox_multi
- * @copyright  2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
+ * @copyright 2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -27,3 +27,5 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'customfield_checkbox_multi';
 $plugin->version   = 2026030300;
 $plugin->requires  = 2024100700;
+$plugin->maturity  = MATURITY_BETA;
+$plugin->release   = '0.9.0';

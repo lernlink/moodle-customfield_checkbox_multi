@@ -17,7 +17,7 @@
  * Options editor for multiselect custom field configuration.
  *
  * @module     customfield_checkbox_multi/options_editor
- * @copyright  2018 Toni Barbera <toni@moodle.com>
+ * @copyright  2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -37,9 +37,9 @@ define([], function() {
     };
 
     var strings = {
-        defaultoptiontitle: 'Default option',
-        defaultoptionlabel: 'Default option',
-        errornotenoughoptions: 'You must provide at least two options.'
+        defaultoptiontitle: '',
+        defaultoptionlabel: '',
+        errornotenoughoptions: ''
     };
     var messageTimeouts = {};
     var handlersbound = false;

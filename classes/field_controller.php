@@ -18,7 +18,7 @@
  * Customfield checkbox multi plugin
  *
  * @package   customfield_checkbox_multi
- * @copyright 2018 Toni Barbera <toni@moodle.com>
+ * @copyright 2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -30,7 +30,7 @@ defined('MOODLE_INTERNAL') || die;
  * Field controller for multiselect custom field.
  *
  * @package   customfield_checkbox_multi
- * @copyright  2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
+ * @copyright 2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class field_controller extends \core_customfield\field_controller {
