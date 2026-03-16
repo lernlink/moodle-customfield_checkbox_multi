@@ -17,7 +17,6 @@
 namespace customfield_checkbox_multi;
 
 use core_customfield_generator;
-use core_customfield_test_instance_form;
 
 /**
  * Functional tests for customfield_checkbox_multi.
@@ -30,12 +29,15 @@ use core_customfield_test_instance_form;
  */
 final class plugin_test extends \advanced_testcase {
 
+    /** @var string Plugin field type used by customfield generator. */
+    private const TEST_FIELD_TYPE = 'checkbox_multi';
+
     /** @var \stdClass[] */
     private $courses = [];
     /** @var \core_customfield\category_controller */
     private $cfcat;
     /** @var \core_customfield\field_controller[] */
-    private $cfields;
+    private $cfields = [];
 
     /**
      * Tests set up.
@@ -50,7 +52,7 @@ final class plugin_test extends \advanced_testcase {
             [
                 'categoryid' => $this->cfcat->get('id'),
                 'shortname' => 'myfield1',
-                'type' => 'checkbox_multi',
+                'type' => self::TEST_FIELD_TYPE,
                 'configdata' => ['options' => "A\nB\nC"],
             ]
         );
@@ -58,7 +60,7 @@ final class plugin_test extends \advanced_testcase {
             [
                 'categoryid' => $this->cfcat->get('id'),
                 'shortname' => 'myfieldrequired',
-                'type' => 'checkbox_multi',
+                'type' => self::TEST_FIELD_TYPE,
                 'configdata' => ['required' => 1, 'options' => "A\nB\nC"],
             ]
         );
@@ -66,7 +68,7 @@ final class plugin_test extends \advanced_testcase {
             [
                 'categoryid' => $this->cfcat->get('id'),
                 'shortname' => 'myfielddefault',
-                'type' => 'checkbox_multi',
+                'type' => self::TEST_FIELD_TYPE,
                 'configdata' => ['defaultvalue' => "B\nC", 'options' => "A\nB\nC"],
             ]
         );
@@ -85,96 +87,185 @@ final class plugin_test extends \advanced_testcase {
     }
 
     /**
+     * Build minimal valid submit data for a new custom field.
+     *
+     * @param array $overrides
+     * @return array
+     */
+    private function get_new_field_submit_data(array $overrides = []): array {
+        $data = [
+            'id' => 0,
+            'categoryid' => $this->cfcat->get('id'),
+            'name' => 'Audit field',
+            'shortname' => 'auditfield',
+            'type' => self::TEST_FIELD_TYPE,
+            'configdata' => [
+                'options' => "Option A\nOption B",
+                'defaultvalue' => '',
+            ],
+            'configdata_options_ui' => ['Option A', 'Option B'],
+        ];
+
+        return array_replace_recursive($data, $overrides);
+    }
+
+    /**
+     * Create a data controller for a generated field and course.
+     *
+     * @param int $fieldindex
+     * @param int $courseindex
+     * @return data_controller
+     */
+    private function get_data_controller(int $fieldindex, int $courseindex = 1): data_controller {
+        return \core_customfield\data_controller::create(
+            0,
+            (object)['instanceid' => $this->courses[$courseindex]->id],
+            $this->cfields[$fieldindex]
+        );
+    }
+
+    /**
      * Test for initialising field and data controllers.
      */
     public function test_initialise(): void {
         $field = \core_customfield\field_controller::create($this->cfields[1]->get('id'));
         $this->assertTrue($field instanceof field_controller);
 
-        $field = \core_customfield\field_controller::create(0, (object)['type' => 'checkbox_multi'], $this->cfcat);
+        $field = \core_customfield\field_controller::create(0, (object)['type' => self::TEST_FIELD_TYPE], $this->cfcat);
         $this->assertTrue($field instanceof field_controller);
 
-        $data = \core_customfield\data_controller::create(0, (object)['instanceid' => $this->courses[1]->id], $this->cfields[1]);
+        $data = $this->get_data_controller(1);
         $this->assertTrue($data instanceof data_controller);
     }
 
     /**
-     * Test configuration form submission.
+     * Test the new-field configuration form can initialise without coding exceptions.
      */
-    public function test_config_form(): void {
+    public function test_new_field_config_form_initialises(): void {
         $this->setAdminUser();
-        $submitdata = (array)$this->cfields[1]->to_record();
-        $submitdata['configdata'] = $this->cfields[1]->get('configdata');
-        $submitdata['configdata_options_ui'] = ['A', 'B', 'C'];
 
-        $submitdata = \core_customfield\field_config_form::mock_ajax_submit($submitdata);
+        $submitdata = \core_customfield\field_config_form::mock_ajax_submit($this->get_new_field_submit_data());
         $form = new \core_customfield\field_config_form(null, null, 'post', '', null, true, $submitdata, true);
         $form->set_data_for_dynamic_submission();
+
         $this->assertTrue($form->is_validated());
     }
 
     /**
-     * Test required validation for instance form.
+     * Test duplicate options use the localised validation string.
      */
-    public function test_instance_form_required_validation(): void {
-        global $CFG;
-        require_once($CFG->dirroot . '/customfield/tests/fixtures/test_instance_form.php');
-        $this->setAdminUser();
-        $handler = $this->cfcat->get_handler();
-
-        $submitdata = (array)$this->courses[1];
-        core_customfield_test_instance_form::mock_submit($submitdata, []);
-        $form = new core_customfield_test_instance_form(
-            'POST',
-            ['handler' => $handler, 'instance' => $this->courses[1]]
+    public function test_config_form_validation_rejects_duplicate_options(): void {
+        $field = \core_customfield\field_controller::create(0, (object)['type' => self::TEST_FIELD_TYPE], $this->cfcat);
+        $errors = $field->config_form_validation(
+            [
+                'configdata' => [
+                    'options' => "Option A\nOption A",
+                    'defaultvalue' => '',
+                ],
+                'configdata_options_ui' => ['Option A', 'Option A'],
+            ],
+            []
         );
-        $this->assertFalse($form->is_validated());
 
-        $submitdata['customfield_myfieldrequired'] = [1 => 1];
-        core_customfield_test_instance_form::mock_submit($submitdata, []);
-        $form = new core_customfield_test_instance_form(
-            'POST',
-            ['handler' => $handler, 'instance' => $this->courses[1]]
+        $this->assertArrayHasKey('options_label', $errors);
+        $this->assertSame(
+            get_string('errorduplicateoptions', 'customfield_checkbox_multi'),
+            $errors['options_label']
         );
-        $this->assertTrue($form->is_validated());
+    }
+
+    /**
+     * Test required validation for instance form reports the expected field error.
+     */
+    public function test_instance_form_required_validation_requires_at_least_one_selection(): void {
+        $data = $this->get_data_controller(2);
+        $elementname = $data->get_form_element_name();
+
+        $errors = $data->instance_form_validation([], []);
+        $this->assertArrayHasKey($elementname . '[0]', $errors);
+        $this->assertSame(
+            get_string('errorrequiredatleastone', 'customfield_checkbox_multi'),
+            $errors[$elementname . '[0]']
+        );
+
+        $errors = $data->instance_form_validation([$elementname => [1 => 1]], []);
+        $this->assertArrayNotHasKey($elementname . '[0]', $errors);
     }
 
     /**
      * Test default values are mapped to option indexes.
      */
     public function test_default_value_mapping(): void {
-        $data = \core_customfield\data_controller::create(0, (object)['instanceid' => $this->courses[1]->id], $this->cfields[3]);
+        $data = $this->get_data_controller(3);
         $this->assertSame('1,2', $data->get_default_value());
         $this->assertSame('B, C', $data->export_value());
 
         $instance = (object)['id' => 0];
         $data->instance_form_before_set_data($instance);
         $elementname = $data->get_form_element_name();
+
         $this->assertSame([1 => 1, 2 => 1], $instance->{$elementname});
     }
 
     /**
-     * Test set_value always normalises values to JSON arrays.
+     * Test instance-form saves always persist JSON arrays, including empty selections.
      */
-    public function test_set_value_normalises_json_storage(): void {
-        $data = \core_customfield\data_controller::create(0, (object)['instanceid' => $this->courses[1]->id], $this->cfields[1]);
+    public function test_instance_form_save_persists_json_for_selected_and_empty_values(): void {
+        $data = $this->get_data_controller(1);
+        $elementname = $data->get_form_element_name();
+
+        $data->instance_form_save((object)[$elementname => [0 => 1, 2 => 1]]);
+        $this->assertSame('["A","C"]', $data->get_value());
+        $this->assertSame('A, C', $data->export_value());
+
+        $instance = (object)['id' => $this->courses[1]->id];
+        $data->instance_form_before_set_data($instance);
+        $this->assertSame([0 => 1, 2 => 1], $instance->{$elementname});
+
+        $data->instance_form_save((object)[]);
+        $this->assertSame('[]', $data->get_value());
+        $this->assertNull($data->export_value());
+    }
+
+    /**
+     * Test set_value keeps JSON storage compatible with form round-tripping.
+     */
+    public function test_set_value_round_trips_json_storage(): void {
+        $data = $this->get_data_controller(1);
+        $elementname = $data->get_form_element_name();
+
+        // Bootstrap a persisted record so set_value() exercises the stored-data path.
+        $data->instance_form_save((object)[$elementname => [0 => 1]]);
 
         $data->set_value(['A', ' ', 'B']);
         $this->assertSame('["A","B"]', $data->get('value'));
         $this->assertSame('A, B', $data->export_value());
 
+        $instance = (object)['id' => $this->courses[1]->id];
+        $data->instance_form_before_set_data($instance);
+        $this->assertSame([0 => 1, 1 => 1], $instance->{$elementname});
+
         $data->set_value('A, B, , C');
         $this->assertSame('["A","B","C"]', $data->get('value'));
 
+        $instance = (object)['id' => $this->courses[1]->id];
+        $data->instance_form_before_set_data($instance);
+        $this->assertSame([0 => 1, 1 => 1, 2 => 1], $instance->{$elementname});
+
         $data->set_value('[]');
         $this->assertSame('[]', $data->get('value'));
+        $this->assertNull($data->export_value());
+
+        $instance = (object)['id' => $this->courses[1]->id];
+        $data->instance_form_before_set_data($instance);
+        $this->assertSame([], $instance->{$elementname});
     }
 
     /**
      * Test is_empty treats empty JSON list as empty.
      */
     public function test_is_empty_handles_empty_json_list(): void {
-        $data = \core_customfield\data_controller::create(0, (object)['instanceid' => $this->courses[2]->id], $this->cfields[1]);
+        $data = $this->get_data_controller(1, 2);
         $method = new \ReflectionMethod($data, 'is_empty');
         $method->setAccessible(true);
 

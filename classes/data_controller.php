@@ -208,6 +208,10 @@ class data_controller extends \core_customfield\data_controller {
             $value = '[]';
         }
 
+        if (!$this->get('contextid') && $this->get('instanceid')) {
+            $this->data->set('contextid', $this->get_context()->id);
+        }
+
         $this->data->set($this->datafield(), $value);
         $this->save();
     }
