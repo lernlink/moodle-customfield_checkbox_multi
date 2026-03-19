@@ -34,14 +34,8 @@ define([], function() {
         defaultInput: 'input[name="configdata[defaultvalue]"]',
         message: '.customfield-checkbox-multi-message',
         form: 'form',
-        inlineControl: '[data-inline-control="1"]'
     };
 
-    var INLINE_HANDLERS = {
-        sync: 'var el = this; require([\'customfield_checkbox_multi/options_editor\'], function(editor) { editor.syncFromControl(el); });',
-        add: 'var ev = arguments[0] || window.event; if (ev && ev.preventDefault) { ev.preventDefault(); } if (ev && ev.stopPropagation) { ev.stopPropagation(); } var el = this; require([\'customfield_checkbox_multi/options_editor\'], function(editor) { editor.handleAddButton(el); }); return false;',
-        remove: 'var ev = arguments[0] || window.event; if (ev && ev.preventDefault) { ev.preventDefault(); } if (ev && ev.stopPropagation) { ev.stopPropagation(); } var el = this; require([\'customfield_checkbox_multi/options_editor\'], function(editor) { editor.handleRemoveButton(el); }); return false;'
-    };
 
     var strings = {
         defaultoptiontitle: '',
@@ -150,35 +144,6 @@ define([], function() {
         return wrapper;
     }
 
-    /**
-     * Attach inline fallback handlers to dynamically created controls.
-     *
-     * @param {HTMLElement} node
-     * @param {string} type
-     */
-    function applyInlineHandlers(node, type) {
-        node.setAttribute('data-inline-control', '1');
-
-        if (type === 'sync') {
-            node.setAttribute('oninput', INLINE_HANDLERS.sync);
-            node.setAttribute('onchange', INLINE_HANDLERS.sync);
-            return;
-        }
-
-        if (type === 'checkbox') {
-            node.setAttribute('onchange', INLINE_HANDLERS.sync);
-            return;
-        }
-
-        if (type === 'add') {
-            node.setAttribute('onclick', INLINE_HANDLERS.add);
-            return;
-        }
-
-        if (type === 'remove') {
-            node.setAttribute('onclick', INLINE_HANDLERS.remove);
-        }
-    }
 
     /**
      * Build a new option row element.
@@ -201,7 +166,6 @@ define([], function() {
         checkbox.id = 'default_' + index;
         checkbox.setAttribute('data-index', index);
         checkbox.title = strings.defaultoptiontitle;
-        applyInlineHandlers(checkbox, 'checkbox');
 
         var label = document.createElement('label');
         label.className = 'form-check-label accesshide';
@@ -217,13 +181,11 @@ define([], function() {
         optionInput.setAttribute('data-index', index);
         optionInput.setAttribute('name', 'configdata_options_ui[]');
         optionInput.value = '';
-        applyInlineHandlers(optionInput, 'sync');
 
         var removeButton = document.createElement('button');
         removeButton.type = 'button';
         removeButton.className = 'btn btn-danger btn-sm remove-option customfield-checkbox-multi-remove-option';
         removeButton.innerHTML = '<i class="fa fa-times"></i>';
-        applyInlineHandlers(removeButton, 'remove');
 
         row.appendChild(checkContainer);
         row.appendChild(optionInput);
@@ -531,9 +493,6 @@ define([], function() {
                 return;
             }
 
-            if (target.closest(SELECTORS.inlineControl)) {
-                return;
-            }
 
             addButton = target.closest(SELECTORS.addOptionButton);
             if (addButton) {
@@ -552,7 +511,7 @@ define([], function() {
         document.addEventListener('change', function(event) {
             var target = event.target;
 
-            if (!target || !target.matches || target.closest(SELECTORS.inlineControl)) {
+            if (!target || !target.matches) {
                 return;
             }
 
@@ -564,7 +523,7 @@ define([], function() {
         document.addEventListener('input', function(event) {
             var target = event.target;
 
-            if (!target || !target.matches || target.closest(SELECTORS.inlineControl)) {
+            if (!target || !target.matches) {
                 return;
             }
 
@@ -576,7 +535,7 @@ define([], function() {
         document.addEventListener('blur', function(event) {
             var target = event.target;
 
-            if (!target || !target.matches || target.closest(SELECTORS.inlineControl)) {
+            if (!target || !target.matches) {
                 return;
             }
 
