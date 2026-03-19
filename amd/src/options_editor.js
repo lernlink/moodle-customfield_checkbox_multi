@@ -33,13 +33,21 @@ define([], function() {
         optionsInput: 'input[name="configdata[options]"]',
         defaultInput: 'input[name="configdata[defaultvalue]"]',
         message: '.customfield-checkbox-multi-message',
-        form: 'form'
+        form: 'form',
+        inlineControl: '[data-inline-control="1"]'
+    };
+
+    var INLINE_HANDLERS = {
+        sync: 'var el = this; require([\'customfield_checkbox_multi/options_editor\'], function(editor) { editor.syncFromControl(el); });',
+        add: 'var ev = arguments[0] || window.event; if (ev && ev.preventDefault) { ev.preventDefault(); } if (ev && ev.stopPropagation) { ev.stopPropagation(); } var el = this; require([\'customfield_checkbox_multi/options_editor\'], function(editor) { editor.handleAddButton(el); }); return false;',
+        remove: 'var ev = arguments[0] || window.event; if (ev && ev.preventDefault) { ev.preventDefault(); } if (ev && ev.stopPropagation) { ev.stopPropagation(); } var el = this; require([\'customfield_checkbox_multi/options_editor\'], function(editor) { editor.handleRemoveButton(el); }); return false;'
     };
 
     var strings = {
         defaultoptiontitle: '',
         defaultoptionlabel: '',
-        errornotenoughoptions: ''
+        errornotenoughoptions: '',
+        debugenabled: false
     };
     var messageTimeouts = {};
     var handlersbound = false;
@@ -58,14 +66,130 @@ define([], function() {
     }
 
     /**
+     * Write debugging information into the browser console.
+     *
+     * @param {HTMLElement|null} wrapper
+     * @param {string} message
+     * @param {*} details
+     */
+    function log(wrapper, message, details) {
+        var debugenabled = !!strings.debugenabled;
+
+        if (wrapper && wrapper.dataset && typeof wrapper.dataset.debugenabled !== 'undefined') {
+            debugenabled = wrapper.dataset.debugenabled === '1';
+        }
+
+        if (!debugenabled || !window.console || !window.console.log) {
+            return;
+        }
+
+        if (typeof details === 'undefined') {
+            window.console.log('[customfield_checkbox_multi]', message);
+            return;
+        }
+
+        window.console.log('[customfield_checkbox_multi]', message, details);
+    }
+
+    /**
+     * Merge string configuration.
+     *
+     * @param {Object} config
+     */
+    function applyConfig(config) {
+        if (!config || typeof config !== 'object') {
+            return;
+        }
+
+        Object.keys(config).forEach(function(key) {
+            strings[key] = config[key];
+        });
+    }
+
+    /**
+     * Pull configuration values from wrapper dataset.
+     *
+     * @param {HTMLElement} wrapper
+     */
+    function applyWrapperConfig(wrapper) {
+        if (!wrapper || !wrapper.dataset) {
+            return;
+        }
+
+        if (wrapper.dataset.defaultoptiontitle) {
+            strings.defaultoptiontitle = wrapper.dataset.defaultoptiontitle;
+        }
+        if (wrapper.dataset.defaultoptionlabel) {
+            strings.defaultoptionlabel = wrapper.dataset.defaultoptionlabel;
+        }
+        if (wrapper.dataset.errornotenoughoptions) {
+            strings.errornotenoughoptions = wrapper.dataset.errornotenoughoptions;
+        }
+        if (typeof wrapper.dataset.debugenabled !== 'undefined') {
+            strings.debugenabled = wrapper.dataset.debugenabled === '1';
+        }
+    }
+
+    /**
+     * Prepare wrapper-level state for a control event.
+     *
+     * @param {HTMLElement} control
+     * @returns {HTMLElement|null}
+     */
+    function prepareWrapper(control) {
+        var wrapper = control && control.closest ? control.closest(SELECTORS.wrapper) : null;
+        if (!wrapper) {
+            log(null, 'No wrapper found for control', {
+                controltag: control && control.tagName ? control.tagName : ''
+            });
+            return null;
+        }
+
+        applyWrapperConfig(wrapper);
+        bindHandlers();
+        return wrapper;
+    }
+
+    /**
+     * Attach inline fallback handlers to dynamically created controls.
+     *
+     * @param {HTMLElement} node
+     * @param {string} type
+     */
+    function applyInlineHandlers(node, type) {
+        node.setAttribute('data-inline-control', '1');
+
+        if (type === 'sync') {
+            node.setAttribute('oninput', INLINE_HANDLERS.sync);
+            node.setAttribute('onchange', INLINE_HANDLERS.sync);
+            return;
+        }
+
+        if (type === 'checkbox') {
+            node.setAttribute('onchange', INLINE_HANDLERS.sync);
+            return;
+        }
+
+        if (type === 'add') {
+            node.setAttribute('onclick', INLINE_HANDLERS.add);
+            return;
+        }
+
+        if (type === 'remove') {
+            node.setAttribute('onclick', INLINE_HANDLERS.remove);
+        }
+    }
+
+    /**
      * Build a new option row element.
      *
      * @param {number} index
+     * @param {HTMLElement} wrapper
      * @returns {HTMLElement}
      */
-    function createOptionRow(index) {
+    function createOptionRow(index, wrapper) {
         var row = document.createElement('div');
-        row.className = 'customfield-checkbox-multi-option-item';
+        row.className = 'option-item customfield-checkbox-multi-option-item';
         row.setAttribute('data-index', index);
 
         var checkContainer = document.createElement('div');
@@ -77,6 +201,7 @@ define([], function() {
         checkbox.id = 'default_' + index;
         checkbox.setAttribute('data-index', index);
         checkbox.title = strings.defaultoptiontitle;
+        applyInlineHandlers(checkbox, 'checkbox');
 
         var label = document.createElement('label');
         label.className = 'form-check-label accesshide';
@@ -88,20 +213,23 @@ define([], function() {
 
         var optionInput = document.createElement('input');
         optionInput.type = 'text';
-        optionInput.className = 'form-control customfield-checkbox-multi-option-input';
+        optionInput.className = 'form-control option-input customfield-checkbox-multi-option-input';
         optionInput.setAttribute('data-index', index);
         optionInput.setAttribute('name', 'configdata_options_ui[]');
         optionInput.value = '';
+        applyInlineHandlers(optionInput, 'sync');
 
         var removeButton = document.createElement('button');
         removeButton.type = 'button';
-        removeButton.className = 'btn btn-danger btn-sm customfield-checkbox-multi-remove-option';
+        removeButton.className = 'btn btn-danger btn-sm remove-option customfield-checkbox-multi-remove-option';
         removeButton.innerHTML = '<i class="fa fa-times"></i>';
+        applyInlineHandlers(removeButton, 'remove');
 
         row.appendChild(checkContainer);
         row.appendChild(optionInput);
         row.appendChild(removeButton);
 
+        log(wrapper, 'Created option row', {index: index});
         return row;
     }
 
@@ -141,6 +269,7 @@ define([], function() {
     /**
      * Show helper message.
      *
+     * @param {HTMLElement} wrapper
      * @param {string} message
      */
     function showMessage(wrapper, message) {
@@ -152,6 +281,7 @@ define([], function() {
 
         messageElement.textContent = message;
         messageElement.style.display = 'block';
+        log(wrapper, 'Show message', {message: message});
 
         if (wrapperKey && messageTimeouts[wrapperKey]) {
             clearTimeout(messageTimeouts[wrapperKey]);
@@ -216,25 +346,12 @@ define([], function() {
     }
 
     /**
-     * Update hidden options field.
+     * Collect checked default option values from wrapper.
      *
      * @param {HTMLElement} wrapper
+     * @returns {Array}
      */
-    function updateOptionsHiddenField(wrapper) {
-        var form = wrapper.closest(SELECTORS.form);
-        var hiddenField = form ? form.querySelector(SELECTORS.optionsInput) : null;
-
-        if (hiddenField) {
-            hiddenField.value = getOptionValues(wrapper).join('\n');
-        }
-    }
-
-    /**
-     * Update hidden default-value field from checked options.
-     *
-     * @param {HTMLElement} wrapper
-     */
-    function updateDefaultHiddenField(wrapper) {
+    function getDefaultValues(wrapper) {
         var selectedDefaults = [];
         var items = wrapper.querySelectorAll(SELECTORS.optionItem);
 
@@ -253,19 +370,91 @@ define([], function() {
             }
         });
 
+        return selectedDefaults;
+    }
+
+    /**
+     * Update hidden options field.
+     *
+     * @param {HTMLElement} wrapper
+     * @returns {Array}
+     */
+    function updateOptionsHiddenField(wrapper) {
+        var form = wrapper.closest(SELECTORS.form);
+        var hiddenField = form ? form.querySelector(SELECTORS.optionsInput) : null;
+        var values = getOptionValues(wrapper);
+
+        if (hiddenField) {
+            hiddenField.value = values.join('\n');
+        }
+
+        return values;
+    }
+
+    /**
+     * Update hidden default-value field from checked options.
+     *
+     * @param {HTMLElement} wrapper
+     * @returns {Array}
+     */
+    function updateDefaultHiddenField(wrapper) {
         var form = wrapper.closest(SELECTORS.form);
         var hiddenField = form ? form.querySelector(SELECTORS.defaultInput) : null;
+        var values = getDefaultValues(wrapper);
+
         if (hiddenField) {
-            hiddenField.value = selectedDefaults.join('\n');
+            hiddenField.value = values.join('\n');
         }
+
+        return values;
     }
 
     /**
      * Sync state after option changes.
+     *
+     * @param {HTMLElement} wrapper
      */
     function syncOptionState(wrapper) {
-        updateOptionsHiddenField(wrapper);
-        updateDefaultHiddenField(wrapper);
+        var options = updateOptionsHiddenField(wrapper);
+        var defaults = updateDefaultHiddenField(wrapper);
+
+        log(wrapper, 'Synced option state', {
+            optioncount: options.length,
+            defaultcount: defaults.length,
+            options: options,
+            defaults: defaults
+        });
+    }
+
+    /**
+     * Sync a control-driven change.
+     *
+     * @param {HTMLElement} control
+     */
+    function syncFromControl(control) {
+        var wrapper = prepareWrapper(control);
+        var optionItem;
+        var checkbox;
+
+        if (!wrapper) {
+            return;
+        }
+
+        optionItem = control.closest ? control.closest(SELECTORS.optionItem) : null;
+        if (optionItem && control.matches && control.matches(SELECTORS.optionInput) && control.value.trim() === '') {
+            checkbox = optionItem.querySelector(SELECTORS.defaultCheckbox);
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+        }
+
+        hideMessage(wrapper);
+        syncOptionState(wrapper);
+        log(wrapper, 'syncFromControl', {
+            tag: control.tagName,
+            name: control.name || '',
+            value: typeof control.value !== 'undefined' ? control.value : ''
+        });
     }
 
     /**
@@ -274,7 +463,7 @@ define([], function() {
      * @param {HTMLElement} addButton
      */
     function handleAddOption(addButton) {
-        var wrapper = addButton.closest(SELECTORS.wrapper);
+        var wrapper = prepareWrapper(addButton);
         var container = wrapper ? wrapper.querySelector(SELECTORS.optionsContainer) : null;
         var optionIndex;
         var newOption;
@@ -285,8 +474,9 @@ define([], function() {
         }
 
         optionIndex = wrapper.querySelectorAll(SELECTORS.optionItem).length;
-        newOption = createOptionRow(optionIndex);
+        newOption = createOptionRow(optionIndex, wrapper);
         container.appendChild(newOption);
+        reindexOptions(wrapper);
 
         newInput = newOption.querySelector(SELECTORS.optionInput);
         if (newInput) {
@@ -295,6 +485,7 @@ define([], function() {
 
         hideMessage(wrapper);
         syncOptionState(wrapper);
+        log(wrapper, 'Added option row', {newindex: optionIndex});
     }
 
     /**
@@ -303,8 +494,8 @@ define([], function() {
      * @param {HTMLElement} removeButton
      */
     function handleRemoveOption(removeButton) {
-        var wrapper = removeButton.closest(SELECTORS.wrapper);
-        var optionItem = removeButton.closest(SELECTORS.optionItem);
+        var wrapper = prepareWrapper(removeButton);
+        var optionItem = removeButton.closest ? removeButton.closest(SELECTORS.optionItem) : null;
         var totalOptions;
 
         if (!wrapper || !optionItem) {
@@ -320,6 +511,7 @@ define([], function() {
         optionItem.remove();
         reindexOptions(wrapper);
         syncOptionState(wrapper);
+        log(wrapper, 'Removed option row', {remaining: wrapper.querySelectorAll(SELECTORS.optionInput).length});
     }
 
     /**
@@ -339,6 +531,10 @@ define([], function() {
                 return;
             }
 
+            if (target.closest(SELECTORS.inlineControl)) {
+                return;
+            }
+
             addButton = target.closest(SELECTORS.addOptionButton);
             if (addButton) {
                 event.preventDefault();
@@ -355,56 +551,37 @@ define([], function() {
 
         document.addEventListener('change', function(event) {
             var target = event.target;
-            var wrapper;
 
-            if (!target || !target.matches || !target.matches(SELECTORS.defaultCheckbox)) {
+            if (!target || !target.matches || target.closest(SELECTORS.inlineControl)) {
                 return;
             }
 
-            wrapper = target.closest(SELECTORS.wrapper);
-            if (wrapper) {
-                syncOptionState(wrapper);
+            if (target.matches(SELECTORS.defaultCheckbox) || target.matches(SELECTORS.optionInput)) {
+                syncFromControl(target);
             }
         });
 
         document.addEventListener('input', function(event) {
             var target = event.target;
-            var wrapper;
-            var optionItem;
-            var checkbox;
 
-            if (!target || !target.matches || !target.matches(SELECTORS.optionInput)) {
+            if (!target || !target.matches || target.closest(SELECTORS.inlineControl)) {
                 return;
             }
 
-            wrapper = target.closest(SELECTORS.wrapper);
-            if (!wrapper) {
-                return;
+            if (target.matches(SELECTORS.optionInput)) {
+                syncFromControl(target);
             }
-
-            optionItem = target.closest(SELECTORS.optionItem);
-            if (optionItem && target.value.trim() === '') {
-                checkbox = optionItem.querySelector(SELECTORS.defaultCheckbox);
-                if (checkbox) {
-                    checkbox.checked = false;
-                }
-            }
-
-            hideMessage(wrapper);
-            syncOptionState(wrapper);
         });
 
         document.addEventListener('blur', function(event) {
             var target = event.target;
-            var wrapper;
 
-            if (!target || !target.matches || !target.matches(SELECTORS.optionInput)) {
+            if (!target || !target.matches || target.closest(SELECTORS.inlineControl)) {
                 return;
             }
 
-            wrapper = target.closest(SELECTORS.wrapper);
-            if (wrapper) {
-                syncOptionState(wrapper);
+            if (target.matches(SELECTORS.optionInput)) {
+                syncFromControl(target);
             }
         }, true);
 
@@ -418,11 +595,13 @@ define([], function() {
 
             wrappers = form.querySelectorAll(SELECTORS.wrapper);
             forEachNode(wrappers, function(wrapper) {
+                applyWrapperConfig(wrapper);
                 syncOptionState(wrapper);
             });
         }, true);
 
         handlersbound = true;
+        log(null, 'Bound delegated handlers');
     }
 
     /**
@@ -431,8 +610,10 @@ define([], function() {
     function syncAllEditors() {
         var wrappers = document.querySelectorAll(SELECTORS.wrapper);
         forEachNode(wrappers, function(wrapper) {
+            applyWrapperConfig(wrapper);
             syncOptionState(wrapper);
         });
+        log(null, 'syncAllEditors completed', {wrappercount: wrappers.length});
     }
 
     /**
@@ -441,18 +622,17 @@ define([], function() {
      * @param {Object} config
      */
     function init(config) {
-        if (config && typeof config === 'object') {
-            Object.keys(config).forEach(function(key) {
-                strings[key] = config[key];
-            });
-        }
-
+        applyConfig(config);
         bindHandlers();
+        log(null, 'options_editor init', config || {});
         syncAllEditors();
         window.setTimeout(syncAllEditors, 0);
     }
 
     return {
-        init: init
+        init: init,
+        syncFromControl: syncFromControl,
+        handleAddButton: handleAddOption,
+        handleRemoveButton: handleRemoveOption
     };
 });

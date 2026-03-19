@@ -58,8 +58,21 @@ class field_controller extends \core_customfield\field_controller {
             $submittedoptions = $this->get_options();
         }
 
-        $defaultarray = $this->parse_default_values((string)$this->get_configdata_property('defaultvalue'));
+        if (is_array($submittedconfig) && array_key_exists('defaultvalue', $submittedconfig)) {
+            $defaultarray = $this->parse_default_values((string)$submittedconfig['defaultvalue']);
+        } else {
+            $defaultarray = $this->parse_default_values((string)$this->get_configdata_property('defaultvalue'));
+        }
+
+        $this->debug_log('config_form_definition', [
+            'has_submittedconfig' => is_array($submittedconfig),
+            'has_submittedoptionsui' => is_array($submittedoptionsui),
+            'submitted_option_count' => count($submittedoptions),
+            'submitted_default_count' => count($defaultarray),
+        ]);
+
         $optioncount = max(count($submittedoptions), 2);
+        $defaultoptiontext = get_string('default_option', 'customfield_checkbox_multi');
 
         $mform->addElement('hidden', 'configdata[options]', '');
         $mform->setType('configdata[options]', PARAM_RAW);
@@ -69,30 +82,45 @@ class field_controller extends \core_customfield\field_controller {
         if ($submittedoptions !== []) {
             $mform->setDefault('configdata[options]', implode("\n", $submittedoptions));
         }
+        if ($defaultarray !== []) {
+            $mform->setDefault('configdata[defaultvalue]', implode("\n", $defaultarray));
+        }
 
-        $alloptionshtml = '<div class="customfield-checkbox-multi-wrapper">';
+        $alloptionshtml = '<div' . $this->html_attributes([
+            'class' => 'customfield-checkbox-multi-wrapper',
+            'data-defaultoptiontitle' => $defaultoptiontext,
+            'data-defaultoptionlabel' => $defaultoptiontext,
+            'data-errornotenoughoptions' => get_string('errornotenoughoptions', 'customfield_checkbox_multi'),
+            'data-debugenabled' => '1',
+        ]) . '>';
         $alloptionshtml .= '<div class="customfield-checkbox-multi-options-container">';
 
         for ($i = 0; $i < $optioncount; $i++) {
             $optiontext = $submittedoptions[$i] ?? '';
             $optionvalue = s($optiontext);
-            $isdefault = in_array($optiontext, $defaultarray, true) ? 'checked' : '';
-            $defaultoptiontext = s(get_string('default_option', 'customfield_checkbox_multi'));
+            $isdefault = in_array($optiontext, $defaultarray, true) ? ' checked' : '';
+            $defaultoptiontitle = s($defaultoptiontext);
 
             $alloptionshtml .= '<div class="option-item customfield-checkbox-multi-option-item" data-index="' . $i . '">';
             $alloptionshtml .= '<div class="form-check customfield-checkbox-multi-check">';
-            $alloptionshtml .= '<input type="checkbox" class="form-check-input default-checkbox" ';
-            $alloptionshtml .= 'id="default_' . $i . '" ' . $isdefault . ' data-index="' . $i . '" ';
-            $alloptionshtml .= 'title="' . $defaultoptiontext . '" />';
+            $alloptionshtml .= '<input type="checkbox" class="form-check-input default-checkbox"';
+            $alloptionshtml .= ' id="default_' . $i . '"' . $isdefault;
+            $alloptionshtml .= ' data-index="' . $i . '" data-inline-control="1"';
+            $alloptionshtml .= ' onchange="' . $this->get_inline_editor_call('syncFromControl') . '"';
+            $alloptionshtml .= ' title="' . $defaultoptiontitle . '" />';
             $alloptionshtml .= '<label class="form-check-label accesshide" for="default_' . $i . '">';
-            $alloptionshtml .= $defaultoptiontext;
+            $alloptionshtml .= $defaultoptiontitle;
             $alloptionshtml .= '</label>';
             $alloptionshtml .= '</div>';
 
             $alloptionshtml .= '<input type="text" class="form-control option-input customfield-checkbox-multi-option-input" ';
-            $alloptionshtml .= 'data-index="' . $i . '" name="configdata_options_ui[]" value="' . $optionvalue . '" />';
+            $alloptionshtml .= 'data-index="' . $i . '" name="configdata_options_ui[]" value="' . $optionvalue . '" ';
+            $alloptionshtml .= 'data-inline-control="1" ';
+            $alloptionshtml .= 'oninput="' . $this->get_inline_editor_call('syncFromControl') . '" ';
+            $alloptionshtml .= 'onchange="' . $this->get_inline_editor_call('syncFromControl') . '" />';
             $alloptionshtml .= '<button type="button" class="btn btn-danger btn-sm remove-option ';
-            $alloptionshtml .= 'customfield-checkbox-multi-remove-option">';
+            $alloptionshtml .= 'customfield-checkbox-multi-remove-option" data-inline-control="1" ';
+            $alloptionshtml .= 'onclick="' . $this->get_inline_editor_call('handleRemoveButton', true) . '">';
             $alloptionshtml .= '<i class="fa fa-times"></i>';
             $alloptionshtml .= '</button>';
             $alloptionshtml .= '</div>';
@@ -101,7 +129,9 @@ class field_controller extends \core_customfield\field_controller {
         $alloptionshtml .= '</div>';
         $alloptionshtml .= '<div class="text-danger small customfield-checkbox-multi-message"></div>';
         $alloptionshtml .= '<div class="customfield-checkbox-multi-actions">';
-        $alloptionshtml .= '<button type="button" class="btn btn-secondary btn-sm customfield-checkbox-multi-add-option">';
+        $alloptionshtml .= '<button type="button" class="btn btn-secondary btn-sm customfield-checkbox-multi-add-option" ';
+        $alloptionshtml .= 'data-inline-control="1" ';
+        $alloptionshtml .= 'onclick="' . $this->get_inline_editor_call('handleAddButton', true) . '">';
         $alloptionshtml .= '<i class="fa fa-plus"></i> ' . get_string('addoptions', 'customfield_checkbox_multi');
         $alloptionshtml .= '</button>';
         $alloptionshtml .= '</div>';
@@ -116,6 +146,9 @@ class field_controller extends \core_customfield\field_controller {
         );
         $mform->addHelpButton('options_label', 'menuoptions', 'customfield_checkbox_multi');
 
+        // Moodle 4.5 does not always call config_form_dynamic_requirements() for this form,
+        // so register the AMD module while building the form as well.
+        $this->initialise_options_editor();
     }
 
     /**
@@ -133,6 +166,14 @@ class field_controller extends \core_customfield\field_controller {
     private function initialise_options_editor(): void {
         global $PAGE;
 
+        $this->debug_log('initialise_options_editor', [
+            'url' => (string)$PAGE->url,
+        ]);
+
+        if (!$PAGE->requires->should_create_one_time_item_now('customfield_checkbox_multi/options_editor:init')) {
+            return;
+        }
+
         $PAGE->requires->js_call_amd(
             'customfield_checkbox_multi/options_editor',
             'init',
@@ -140,6 +181,7 @@ class field_controller extends \core_customfield\field_controller {
                 'defaultoptiontitle' => get_string('default_option', 'customfield_checkbox_multi'),
                 'defaultoptionlabel' => get_string('default_option', 'customfield_checkbox_multi'),
                 'errornotenoughoptions' => get_string('errornotenoughoptions', 'customfield_checkbox_multi'),
+                'debugenabled' => true,
             ]]
         );
     }
@@ -260,6 +302,18 @@ class field_controller extends \core_customfield\field_controller {
             $options = $this->parse_options_array($data['configdata_options_ui']);
         }
 
+        $this->debug_log('config_form_validation_input', [
+            'top_level_keys' => array_keys($data),
+            'configdata_keys' => isset($data['configdata']) && is_array($data['configdata']) ? array_keys($data['configdata']) : [],
+            'options_hidden_length' => isset($data['configdata']['options']) ? strlen((string)$data['configdata']['options']) : 0,
+            'has_options_ui' => isset($data['configdata_options_ui']) && is_array($data['configdata_options_ui']),
+            'options_ui_count' => isset($data['configdata_options_ui']) && is_array($data['configdata_options_ui']) ?
+                count($data['configdata_options_ui']) : 0,
+            'parsed_option_count' => count($options),
+            'defaultvalue_length' => isset($data['configdata']['defaultvalue']) ?
+                strlen((string)$data['configdata']['defaultvalue']) : 0,
+        ]);
+
         if (count($options) < 2) {
             $errors['options_label'] = get_string('errornotenoughoptions', 'customfield_checkbox_multi');
         }
@@ -286,6 +340,65 @@ class field_controller extends \core_customfield\field_controller {
             }
         }
 
+        $this->debug_log('config_form_validation_result', [
+            'parsed_option_count' => count($options),
+            'error_keys' => array_keys($errors),
+        ]);
+
         return $errors;
+    }
+
+    /**
+     * Convert attribute array into HTML attributes.
+     *
+     * @param array $attributes
+     * @return string
+     */
+    private function html_attributes(array $attributes): string {
+        $html = '';
+        foreach ($attributes as $name => $value) {
+            $html .= ' ' . $name . '="' . s((string)$value) . '"';
+        }
+        return $html;
+    }
+
+    /**
+     * Build inline AMD loader call for controls rendered in static HTML.
+     *
+     * @param string $method
+     * @param bool $cancelclick
+     * @return string
+     */
+    private function get_inline_editor_call(string $method, bool $cancelclick = false): string {
+        $script = '';
+        if ($cancelclick) {
+            $script .= 'var ev = arguments[0] || window.event;';
+            $script .= 'if (ev && ev.preventDefault) { ev.preventDefault(); }';
+            $script .= 'if (ev && ev.stopPropagation) { ev.stopPropagation(); }';
+        }
+
+        $script .= 'var el = this;';
+        $script .= "require(['customfield_checkbox_multi/options_editor'], function(editor) { editor.{$method}(el); });";
+
+        if ($cancelclick) {
+            $script .= ' return false;';
+        }
+
+        return s($script);
+    }
+
+    /**
+     * Write debugging details into the PHP error log.
+     *
+     * @param string $stage
+     * @param array $context
+     * @return void
+     */
+    private function debug_log(string $stage, array $context = []): void {
+        $payload = json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($payload === false) {
+            $payload = 'json_encode_failed';
+        }
+        error_log('[customfield_checkbox_multi] ' . $stage . ' ' . $payload);
     }
 }

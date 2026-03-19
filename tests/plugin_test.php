@@ -142,13 +142,22 @@ final class plugin_test extends \advanced_testcase {
      * Test the new-field configuration form can initialise without coding exceptions.
      */
     public function test_new_field_config_form_initialises(): void {
+        global $PAGE;
+
         $this->setAdminUser();
+        $PAGE = new \moodle_page();
+        $PAGE->set_context(\context_system::instance());
+        $PAGE->set_url(new \moodle_url('/customfield/field/checkbox_multi/tests/plugin_test.php'));
 
         $submitdata = \core_customfield\field_config_form::mock_ajax_submit($this->get_new_field_submit_data());
         $form = new \core_customfield\field_config_form(null, null, 'post', '', null, true, $submitdata, true);
         $form->set_data_for_dynamic_submission();
 
         $this->assertTrue($form->is_validated());
+        $this->assertStringContainsString(
+            'customfield_checkbox_multi/options_editor',
+            $PAGE->requires->get_end_code()
+        );
     }
 
     /**
