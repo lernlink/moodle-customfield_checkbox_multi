@@ -24,8 +24,6 @@
 
 namespace customfield_checkbox_multi;
 
-defined('MOODLE_INTERNAL') || die;
-
 /**
  * Data controller for multiselect custom field.
  *
@@ -34,7 +32,6 @@ defined('MOODLE_INTERNAL') || die;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class data_controller extends \core_customfield\data_controller {
-
     /**
      * Return storage field name.
      *
@@ -65,7 +62,7 @@ class data_controller extends \core_customfield\data_controller {
             return '';
         }
 
-        $values = array_filter($values, static function(string $value): bool {
+        $values = array_filter($values, static function (string $value): bool {
             return trim($value) !== '';
         });
 
@@ -106,7 +103,6 @@ class data_controller extends \core_customfield\data_controller {
             $formattedoption = format_string($option, true, ['context' => $context]);
             $mform->addElement('checkbox', $elementname . '[' . $key . ']', '', $formattedoption);
         }
-
     }
 
     /**
@@ -265,7 +261,7 @@ class data_controller extends \core_customfield\data_controller {
         }
 
         $context = $this->get_field()->get_handler()->get_configuration_context();
-        $selectedvalues = array_map(static function(string $option) use ($context): string {
+        $selectedvalues = array_map(static function (string $option) use ($context): string {
             return format_string($option, true, ['context' => $context]);
         }, $selectedvalues);
 
@@ -343,11 +339,11 @@ class data_controller extends \core_customfield\data_controller {
      * @return array
      */
     private function filter_values(array $values): array {
-        $cleanvalues = array_map(static function($value): string {
+        $cleanvalues = array_map(static function ($value): string {
             return trim((string)$value);
         }, $values);
 
-        $cleanvalues = array_filter($cleanvalues, static function(string $value): bool {
+        $cleanvalues = array_filter($cleanvalues, static function (string $value): bool {
             return $value !== '';
         });
 

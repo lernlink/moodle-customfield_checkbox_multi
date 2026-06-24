@@ -16,8 +16,6 @@
 
 namespace customfield_checkbox_multi\local\hook\output;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Hook to add the options editor AMD module to the page head.
  *

@@ -21,8 +21,6 @@ use core_customfield\privacy\customfield_provider;
 use core_privacy\local\metadata\null_provider;
 use core_privacy\local\request\writer;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Privacy provider for customfield_checkbox_multi.
  *
@@ -30,8 +28,7 @@ defined('MOODLE_INTERNAL') || die();
  * @copyright  2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider implements null_provider, customfield_provider {
-
+class provider implements customfield_provider, null_provider {
     /**
      * Language string identifier for null-provider reason.
      *

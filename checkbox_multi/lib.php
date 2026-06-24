@@ -14,10 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-defined('MOODLE_INTERNAL') || die();
+/**
+ * Library functions for the multi-select custom field.
+ *
+ * @package    customfield_checkbox_multi
+ * @copyright  2026 Boxuan Liu <boxuan.liu@tu-dresden.de>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 /**
  * Register the options editor AMD module on the current page.
+ *
+ * @package customfield_checkbox_multi
  *
  * @return void
  */
@@ -42,6 +50,3 @@ function customfield_checkbox_multi_require_options_editor(): void {
 
     $initialised = true;
 }
-
-
-

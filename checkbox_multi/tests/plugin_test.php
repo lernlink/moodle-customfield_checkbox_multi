@@ -28,7 +28,6 @@ use core_customfield_generator;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class plugin_test extends \advanced_testcase {
-
     /** @var string Plugin field type used by customfield generator. */
     private const TEST_FIELD_TYPE = 'checkbox_multi';
 

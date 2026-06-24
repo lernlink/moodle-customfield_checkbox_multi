@@ -24,6 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['addoptions'] = 'Add options';
+$string['contactadminforchange'] = 'Please contact the administrator for this change.';
+$string['default_option'] = 'Default option';
 $string['defaultvalue'] = 'Default values';
 $string['defaultvalue_help'] = 'Enter default values, one per line. These options will be pre-selected when creating new '
     . 'instances. For backward compatibility, you can also use comma-separated values.';
@@ -31,18 +34,15 @@ $string['defaultvalue_note'] = 'You can enter default values one per line, or us
     . 'compatibility.';
 $string['errorconfigunique'] = 'The multiselect field cannot be defined as unique.';
 $string['errordefaultvaluenotinlist'] = 'The default value "{$a}" is not one of the available options.';
+$string['errorduplicateoptions'] = 'Duplicate options are not allowed';
 $string['errornotenoughoptions'] = 'You must provide at least two options.';
 $string['errorrequiredatleastone'] = 'Please select at least one option.';
 $string['menuoptions'] = 'Menu options';
+$string['menuoptions_help'] = 'Enter one option per row and mark default options with the checkbox at the left.';
+$string['menuoptionsdesc'] = 'Enter one option per field. You can add or remove options as needed.';
+$string['option'] = 'Option';
 $string['pluginname'] = 'Multi-select';
 $string['pluginname_help'] = 'Store multiple values by selecting one or more checkboxes.';
 $string['privacy:metadata'] = 'The Multi-select field type plugin doesn\'t store any personal data; it uses tables '
     . 'defined in core.';
 $string['specificsettings'] = 'Multi-select field settings';
-$string['option'] = 'Option';
-$string['menuoptionsdesc'] = 'Enter one option per field. You can add or remove options as needed.';
-$string['errorduplicateoptions'] = 'Duplicate options are not allowed';
-$string['default_option'] = 'Default option';
-$string['addoptions'] = 'Add options';
-$string['menuoptions_help'] = 'Enter one option per row and mark default options with the checkbox at the left.';
-$string['contactadminforchange'] = 'Please contact the administrator for this change.';

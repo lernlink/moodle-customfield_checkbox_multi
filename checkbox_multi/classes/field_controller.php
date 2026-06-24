@@ -24,8 +24,6 @@
 
 namespace customfield_checkbox_multi;
 
-defined('MOODLE_INTERNAL') || die;
-
 /**
  * Field controller for multiselect custom field.
  *
@@ -44,15 +42,18 @@ class field_controller extends \core_customfield\field_controller {
      */
     #[\Override]
     public function config_form_definition(\MoodleQuickForm $mform) {
-        $mform->addElement('header', 'header_specificsettings',
-            get_string('specificsettings', 'customfield_checkbox_multi'));
+        $mform->addElement(
+            'header',
+            'header_specificsettings',
+            get_string('specificsettings', 'customfield_checkbox_multi')
+        );
         $mform->setExpanded('header_specificsettings', true);
 
         $submittedconfig = optional_param_array('configdata', null, PARAM_RAW);
         $submittedoptionsui = optional_param_array('configdata_options_ui', null, PARAM_RAW);
         if (is_array($submittedconfig) && array_key_exists('options', $submittedconfig)) {
             $submittedoptions = $this->parse_submitted_options($submittedconfig['options']);
-        } elseif (is_array($submittedoptionsui)) {
+        } else if (is_array($submittedoptionsui)) {
             $submittedoptions = $this->parse_options_array($submittedoptionsui);
         } else {
             $submittedoptions = $this->get_options();
@@ -63,7 +64,6 @@ class field_controller extends \core_customfield\field_controller {
         } else {
             $defaultarray = $this->parse_default_values((string)$this->get_configdata_property('defaultvalue'));
         }
-
 
         $optioncount = max(count($submittedoptions), 2);
         $defaultoptiontext = get_string('default_option', 'customfield_checkbox_multi');
@@ -142,7 +142,7 @@ class field_controller extends \core_customfield\field_controller {
      *
      * @param \MoodleQuickForm $mform
      */
-    public function config_form_dynamic_requirements(\MoodleQuickForm $_mform): void {
+    public function config_form_dynamic_requirements(\MoodleQuickForm $mform): void {
         $this->initialise_options_editor();
     }
 
@@ -151,7 +151,6 @@ class field_controller extends \core_customfield\field_controller {
      */
     private function initialise_options_editor(): void {
         global $PAGE;
-
 
         $PAGE->requires->js_call_amd(
             'customfield_checkbox_multi/options_editor',
@@ -191,7 +190,7 @@ class field_controller extends \core_customfield\field_controller {
             return [];
         }
 
-        $options = array_filter($options, static function(string $option): bool {
+        $options = array_filter($options, static function (string $option): bool {
             return trim($option) !== '';
         });
 
@@ -205,11 +204,11 @@ class field_controller extends \core_customfield\field_controller {
      * @return array
      */
     private function parse_options_array(array $options): array {
-        $cleanoptions = array_map(static function($option): string {
+        $cleanoptions = array_map(static function ($option): string {
             return trim((string)$option);
         }, $options);
 
-        $cleanoptions = array_filter($cleanoptions, static function(string $option): bool {
+        $cleanoptions = array_filter($cleanoptions, static function (string $option): bool {
             return $option !== '';
         });
 
@@ -245,7 +244,7 @@ class field_controller extends \core_customfield\field_controller {
             return [];
         }
 
-        $values = array_filter($values, static function(string $value): bool {
+        $values = array_filter($values, static function (string $value): bool {
             return trim($value) !== '';
         });
 
@@ -270,7 +269,7 @@ class field_controller extends \core_customfield\field_controller {
      * @return array associative array of error messages
      */
     #[\Override]
-    public function config_form_validation(array $data, $files = array()): array {
+    public function config_form_validation(array $data, $files = []): array {
         $errors = parent::config_form_validation($data, $files);
 
         $options = [];
@@ -324,5 +323,3 @@ class field_controller extends \core_customfield\field_controller {
         return $html;
     }
 }
-
-
