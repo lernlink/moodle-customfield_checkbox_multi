@@ -2,7 +2,7 @@
 Feature: Managers can manage course custom fields multi-select
   In order to have additional data on the course
   As a manager
-  I need to create a multi-select custom field
+  I need to create, edit and delete a multi-select custom field
 
   Background:
     Given the following "custom field categories" exist:
@@ -15,44 +15,43 @@ Feature: Managers can manage course custom fields multi-select
     When I click on "Add a new custom field" "link"
     And I click on "Multi-select" "link"
     And I set the following fields to these values:
-      | Name         | Test multi field |
-      | Short name   | testmultifield   |
-      | Menu options | test1            |
-      | Menu options | test2            |
-    And click at least one "checkbox" besides option to set it as default true.
+      | Name       | Test field |
+      | Short name | testfield  |
+    And I set the field with xpath "//input[contains(@class, 'option-input') and @data-index = '0']" to "test1"
+    And I set the field with xpath "//input[contains(@class, 'option-input') and @data-index = '1']" to "test2"
+    And I set the field with xpath "//input[@id = 'default_0']" to "1"
     And I click on "Save changes" "button" in the "Adding a new Multi-select" "dialogue"
-    Then I should see "Test multi field"
+    Then I should see "Test field"
     And I log out
 
-
-  Scenario: Create a custom course multi-select field
+  Scenario: Edit a custom course multi-select field
     When I click on "Add a new custom field" "link"
     And I click on "Multi-select" "link"
     And I set the following fields to these values:
-      | Name         | Test multi field |
-      | Short name   | testmultifield   |
-      | Menu options | test1            |
-      | Menu options | test2            |
-    And click at least one "checkbox" besides option to set it as default true.
+      | Name       | Test field |
+      | Short name | testfield  |
+    And I set the field with xpath "//input[contains(@class, 'option-input') and @data-index = '0']" to "test1"
+    And I set the field with xpath "//input[contains(@class, 'option-input') and @data-index = '1']" to "test2"
     And I click on "Save changes" "button" in the "Adding a new Multi-select" "dialogue"
-    And I click on "Edit" "link" in the "Test field" "table_row"
+    And I press "Edit custom field: Test field"
     And I set the following fields to these values:
       | Name | Edited field |
     And I click on "Save changes" "button" in the "Updating Test field" "dialogue"
     Then I should see "Edited field"
-    And I should not see "Test multi field"
+    And I should not see "Test field"
+    And I log out
 
   Scenario: Delete a custom course multi-select field
     When I click on "Add a new custom field" "link"
     And I click on "Multi-select" "link"
     And I set the following fields to these values:
-      | Name         | Test multi field |
-      | Short name   | testmultifield   |
-      | Menu options | test1            |
-      | Menu options | test2            |
-    And click at least one "checkbox" besides option to set it as default true.
+      | Name       | Test field |
+      | Short name | testfield  |
+    And I set the field with xpath "//input[contains(@class, 'option-input') and @data-index = '0']" to "test1"
+    And I set the field with xpath "//input[contains(@class, 'option-input') and @data-index = '1']" to "test2"
     And I click on "Save changes" "button" in the "Adding a new Multi-select" "dialogue"
-    And I click on "Delete" "link" in the "Test field" "table_row"
+    And I press "Delete custom field: Test field"
     And I click on "Yes" "button" in the "Confirm" "dialogue"
-    Then I should not see "Test multi field"
+    Then I should not see "Test field"
+    And I log out
     And I log out
