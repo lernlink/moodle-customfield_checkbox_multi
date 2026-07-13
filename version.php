@@ -27,5 +27,5 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'customfield_checkbox_multi';
 $plugin->version   = 2026031901;
 $plugin->requires  = 2024100700;
-$plugin->maturity  = MATURITY_BETA;
+$plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = '0.9.3';
