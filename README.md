@@ -1,5 +1,7 @@
 # Multi-select custom field (`customfield_checkbox_multi`)
 
+[![Moodle Plugin CI](https://github.com/lernlink/moodle-customfield_checkbox_multi/actions/workflows/moodle-ci.yml/badge.svg)](https://github.com/lernlink/moodle-customfield_checkbox_multi/actions/workflows/moodle-ci.yml)
+
 This plugin adds a custom field type for Moodle that lets users select multiple values using checkboxes.
 
 ## Features
