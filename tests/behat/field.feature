@@ -12,7 +12,7 @@ Feature: Managers can manage course custom fields multi-select
     And I navigate to "Courses > Default settings > Course custom fields" in site administration
 
   Scenario: Create a custom course multi-select field
-    When I click on "Add a new custom field" "link"
+    When I click on "//a[contains(., 'Add a new custom field') or contains(., 'Add field')]" "xpath_element"
     And I click on "Multi-select" "link"
     And I set the following fields to these values:
       | Name       | Test field |
@@ -25,7 +25,7 @@ Feature: Managers can manage course custom fields multi-select
     And I log out
 
   Scenario: Edit a custom course multi-select field
-    When I click on "Add a new custom field" "link"
+    When I click on "//a[contains(., 'Add a new custom field') or contains(., 'Add field')]" "xpath_element"
     And I click on "Multi-select" "link"
     And I set the following fields to these values:
       | Name       | Test field |
@@ -42,7 +42,7 @@ Feature: Managers can manage course custom fields multi-select
     And I log out
 
   Scenario: Delete a custom course multi-select field
-    When I click on "Add a new custom field" "link"
+    When I click on "//a[contains(., 'Add a new custom field') or contains(., 'Add field')]" "xpath_element"
     And I click on "Multi-select" "link"
     And I set the following fields to these values:
       | Name       | Test field |
@@ -53,5 +53,4 @@ Feature: Managers can manage course custom fields multi-select
     And I press "Delete custom field: Test field"
     And I click on "Yes" "button" in the "Confirm" "dialogue"
     Then I should not see "Test field"
-    And I log out
     And I log out
