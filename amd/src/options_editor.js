@@ -21,577 +21,537 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define([], function() {
-    var SELECTORS = {
-        wrapper: '.customfield-checkbox-multi-wrapper',
-        optionsContainer: '.customfield-checkbox-multi-options-container',
-        optionItem: '.customfield-checkbox-multi-option-item',
-        optionInput: '.customfield-checkbox-multi-option-input',
-        defaultCheckbox: '.default-checkbox',
-        removeOptionButton: '.customfield-checkbox-multi-remove-option',
-        addOptionButton: '.customfield-checkbox-multi-add-option',
-        optionsInput: 'input[name="configdata[options]"]',
-        defaultInput: 'input[name="configdata[defaultvalue]"]',
-        message: '.customfield-checkbox-multi-message',
-        form: 'form',
-    };
+const SELECTORS = {
+    wrapper: '.customfield-checkbox-multi-wrapper',
+    optionsContainer: '.customfield-checkbox-multi-options-container',
+    optionItem: '.customfield-checkbox-multi-option-item',
+    optionInput: '.customfield-checkbox-multi-option-input',
+    defaultCheckbox: '.default-checkbox',
+    removeOptionButton: '.customfield-checkbox-multi-remove-option',
+    addOptionButton: '.customfield-checkbox-multi-add-option',
+    optionsInput: 'input[name="configdata[options]"]',
+    defaultInput: 'input[name="configdata[defaultvalue]"]',
+    message: '.customfield-checkbox-multi-message',
+    form: 'form',
+};
 
+const strings = {
+    defaultoptiontitle: '',
+    defaultoptionlabel: '',
+    errornotenoughoptions: '',
+    debugenabled: false,
+};
 
-    var strings = {
-        defaultoptiontitle: '',
-        defaultoptionlabel: '',
-        errornotenoughoptions: '',
-        debugenabled: false
-    };
-    var messageTimeouts = {};
-    var handlersbound = false;
+const messageTimeouts = {};
+let handlersbound = false;
 
-    /**
-     * Iterate over node list safely.
-     *
-     * @param {NodeList} list
-     * @param {Function} callback
-     */
-    function forEachNode(list, callback) {
-        var i;
-        for (i = 0; i < list.length; i++) {
-            callback(list[i], i);
-        }
+/**
+ * Write debugging information into the browser console.
+ *
+ * @param {HTMLElement|null} wrapper
+ * @param {string} message
+ * @param {*} details
+ */
+const log = (wrapper, message, details) => {
+    let debugenabled = !!strings.debugenabled;
+
+    if (wrapper && wrapper.dataset && typeof wrapper.dataset.debugenabled !== 'undefined') {
+        debugenabled = wrapper.dataset.debugenabled === '1';
     }
 
-    /**
-     * Write debugging information into the browser console.
-     *
-     * @param {HTMLElement|null} wrapper
-     * @param {string} message
-     * @param {*} details
-     */
-    function log(wrapper, message, details) {
-        var debugenabled = !!strings.debugenabled;
-
-        if (wrapper && wrapper.dataset && typeof wrapper.dataset.debugenabled !== 'undefined') {
-            debugenabled = wrapper.dataset.debugenabled === '1';
-        }
-
-        if (!debugenabled || !window.console || !window.console.log) {
-            return;
-        }
-
-        if (typeof details === 'undefined') {
-            window.console.log('[customfield_checkbox_multi]', message);
-            return;
-        }
-
-        window.console.log('[customfield_checkbox_multi]', message, details);
+    if (!debugenabled || !window.console || !window.console.log) {
+        return;
     }
 
-    /**
-     * Merge string configuration.
-     *
-     * @param {Object} config
-     */
-    function applyConfig(config) {
-        if (!config || typeof config !== 'object') {
-            return;
-        }
+    if (typeof details === 'undefined') {
+        window.console.log('[customfield_checkbox_multi]', message);
+        return;
+    }
 
-        Object.keys(config).forEach(function(key) {
-            strings[key] = config[key];
+    window.console.log('[customfield_checkbox_multi]', message, details);
+};
+
+/**
+ * Merge string configuration.
+ *
+ * @param {Object} config
+ */
+const applyConfig = (config) => {
+    if (!config || typeof config !== 'object') {
+        return;
+    }
+
+    Object.keys(config).forEach((key) => {
+        strings[key] = config[key];
+    });
+};
+
+/**
+ * Pull configuration values from wrapper dataset.
+ *
+ * @param {HTMLElement} wrapper
+ */
+const applyWrapperConfig = (wrapper) => {
+    if (!wrapper || !wrapper.dataset) {
+        return;
+    }
+
+    if (wrapper.dataset.defaultoptiontitle) {
+        strings.defaultoptiontitle = wrapper.dataset.defaultoptiontitle;
+    }
+    if (wrapper.dataset.defaultoptionlabel) {
+        strings.defaultoptionlabel = wrapper.dataset.defaultoptionlabel;
+    }
+    if (wrapper.dataset.errornotenoughoptions) {
+        strings.errornotenoughoptions = wrapper.dataset.errornotenoughoptions;
+    }
+    if (typeof wrapper.dataset.debugenabled !== 'undefined') {
+        strings.debugenabled = wrapper.dataset.debugenabled === '1';
+    }
+};
+
+/**
+ * Prepare wrapper-level state for a control event.
+ *
+ * @param {HTMLElement} control
+ * @returns {HTMLElement|null}
+ */
+const prepareWrapper = (control) => {
+    const wrapper = control && control.closest ? control.closest(SELECTORS.wrapper) : null;
+    if (!wrapper) {
+        log(null, 'No wrapper found for control', {
+            controltag: control && control.tagName ? control.tagName : '',
         });
+        return null;
     }
 
-    /**
-     * Pull configuration values from wrapper dataset.
-     *
-     * @param {HTMLElement} wrapper
-     */
-    function applyWrapperConfig(wrapper) {
-        if (!wrapper || !wrapper.dataset) {
-            return;
-        }
+    applyWrapperConfig(wrapper);
+    bindHandlers();
+    return wrapper;
+};
 
-        if (wrapper.dataset.defaultoptiontitle) {
-            strings.defaultoptiontitle = wrapper.dataset.defaultoptiontitle;
-        }
-        if (wrapper.dataset.defaultoptionlabel) {
-            strings.defaultoptionlabel = wrapper.dataset.defaultoptionlabel;
-        }
-        if (wrapper.dataset.errornotenoughoptions) {
-            strings.errornotenoughoptions = wrapper.dataset.errornotenoughoptions;
-        }
-        if (typeof wrapper.dataset.debugenabled !== 'undefined') {
-            strings.debugenabled = wrapper.dataset.debugenabled === '1';
-        }
+/**
+ * Build a new option row element.
+ *
+ * @param {Number} index
+ * @param {HTMLElement} wrapper
+ * @returns {HTMLElement}
+ */
+const createOptionRow = (index, wrapper) => {
+    const row = document.createElement('div');
+    row.className = 'option-item customfield-checkbox-multi-option-item';
+    row.setAttribute('data-index', index);
+
+    const checkContainer = document.createElement('div');
+    checkContainer.className = 'form-check customfield-checkbox-multi-check';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'form-check-input default-checkbox';
+    checkbox.id = 'default_' + index;
+    checkbox.setAttribute('data-index', index);
+    checkbox.title = strings.defaultoptiontitle;
+
+    const label = document.createElement('label');
+    label.className = 'form-check-label accesshide';
+    label.setAttribute('for', 'default_' + index);
+    label.textContent = strings.defaultoptionlabel;
+
+    checkContainer.appendChild(checkbox);
+    checkContainer.appendChild(label);
+
+    const optionInput = document.createElement('input');
+    optionInput.type = 'text';
+    optionInput.className = 'form-control option-input customfield-checkbox-multi-option-input';
+    optionInput.setAttribute('data-index', index);
+    optionInput.setAttribute('name', 'configdata_options_ui[]');
+    optionInput.value = '';
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'btn btn-danger btn-sm remove-option customfield-checkbox-multi-remove-option';
+
+    const removeIcon = document.createElement('i');
+    removeIcon.className = 'fa fa-times';
+    removeButton.appendChild(removeIcon);
+
+    row.appendChild(checkContainer);
+    row.appendChild(optionInput);
+    row.appendChild(removeButton);
+
+    log(wrapper, 'Created option row', {index: index});
+    return row;
+};
+
+/**
+ * Get a stable key for wrapper-specific timers.
+ *
+ * @param {HTMLElement} wrapper
+ * @returns {String}
+ */
+const getWrapperKey = (wrapper) => {
+    if (!wrapper) {
+        return '';
     }
 
-    /**
-     * Prepare wrapper-level state for a control event.
-     *
-     * @param {HTMLElement} control
-     * @returns {HTMLElement|null}
-     */
-    function prepareWrapper(control) {
-        var wrapper = control && control.closest ? control.closest(SELECTORS.wrapper) : null;
-        if (!wrapper) {
-            log(null, 'No wrapper found for control', {
-                controltag: control && control.tagName ? control.tagName : ''
-            });
-            return null;
-        }
-
-        applyWrapperConfig(wrapper);
-        bindHandlers();
-        return wrapper;
+    if (!wrapper.getAttribute('data-editorid')) {
+        wrapper.setAttribute('data-editorid', String(Date.now()) + String(Math.random()));
     }
 
+    return wrapper.getAttribute('data-editorid');
+};
 
-    /**
-     * Build a new option row element.
-     *
-     * @param {number} index
-     * @param {HTMLElement} wrapper
-     * @returns {HTMLElement}
-     */
-    function createOptionRow(index, wrapper) {
-        var row = document.createElement('div');
-        row.className = 'option-item customfield-checkbox-multi-option-item';
-        row.setAttribute('data-index', index);
-
-        var checkContainer = document.createElement('div');
-        checkContainer.className = 'form-check customfield-checkbox-multi-check';
-
-        var checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'form-check-input default-checkbox';
-        checkbox.id = 'default_' + index;
-        checkbox.setAttribute('data-index', index);
-        checkbox.title = strings.defaultoptiontitle;
-
-        var label = document.createElement('label');
-        label.className = 'form-check-label accesshide';
-        label.setAttribute('for', 'default_' + index);
-        label.textContent = strings.defaultoptionlabel;
-
-        checkContainer.appendChild(checkbox);
-        checkContainer.appendChild(label);
-
-        var optionInput = document.createElement('input');
-        optionInput.type = 'text';
-        optionInput.className = 'form-control option-input customfield-checkbox-multi-option-input';
-        optionInput.setAttribute('data-index', index);
-        optionInput.setAttribute('name', 'configdata_options_ui[]');
-        optionInput.value = '';
-
-        var removeButton = document.createElement('button');
-        removeButton.type = 'button';
-        removeButton.className = 'btn btn-danger btn-sm remove-option customfield-checkbox-multi-remove-option';
-        removeButton.innerHTML = '<i class="fa fa-times"></i>';
-
-        row.appendChild(checkContainer);
-        row.appendChild(optionInput);
-        row.appendChild(removeButton);
-
-        log(wrapper, 'Created option row', {index: index});
-        return row;
+/**
+ * Hide helper message.
+ *
+ * @param {HTMLElement} wrapper
+ */
+const hideMessage = (wrapper) => {
+    const messageElement = wrapper ? wrapper.querySelector(SELECTORS.message) : null;
+    if (!messageElement) {
+        return;
     }
 
-    /**
-     * Get a stable key for wrapper-specific timers.
-     *
-     * @param {HTMLElement} wrapper
-     * @returns {string}
-     */
-    function getWrapperKey(wrapper) {
-        if (!wrapper) {
-            return '';
-        }
+    messageElement.style.display = 'none';
+    messageElement.textContent = '';
+};
 
-        if (!wrapper.getAttribute('data-editorid')) {
-            wrapper.setAttribute('data-editorid', String(Date.now()) + String(Math.random()));
-        }
-
-        return wrapper.getAttribute('data-editorid');
+/**
+ * Show helper message.
+ *
+ * @param {HTMLElement} wrapper
+ * @param {String} message
+ */
+const showMessage = (wrapper, message) => {
+    const messageElement = wrapper ? wrapper.querySelector(SELECTORS.message) : null;
+    const wrapperKey = getWrapperKey(wrapper);
+    if (!messageElement) {
+        return;
     }
 
-    /**
-     * Hide helper message.
-     *
-     * @param {HTMLElement} wrapper
-     */
-    function hideMessage(wrapper) {
-        var messageElement = wrapper ? wrapper.querySelector(SELECTORS.message) : null;
-        if (!messageElement) {
-            return;
-        }
+    messageElement.textContent = message;
+    messageElement.style.display = 'block';
+    log(wrapper, 'Show message', {message: message});
 
-        messageElement.style.display = 'none';
-        messageElement.textContent = '';
+    if (wrapperKey && messageTimeouts[wrapperKey]) {
+        clearTimeout(messageTimeouts[wrapperKey]);
     }
 
-    /**
-     * Show helper message.
-     *
-     * @param {HTMLElement} wrapper
-     * @param {string} message
-     */
-    function showMessage(wrapper, message) {
-        var messageElement = wrapper ? wrapper.querySelector(SELECTORS.message) : null;
-        var wrapperKey = getWrapperKey(wrapper);
-        if (!messageElement) {
-            return;
-        }
-
-        messageElement.textContent = message;
-        messageElement.style.display = 'block';
-        log(wrapper, 'Show message', {message: message});
-
-        if (wrapperKey && messageTimeouts[wrapperKey]) {
-            clearTimeout(messageTimeouts[wrapperKey]);
-        }
-
-        messageTimeouts[wrapperKey] = setTimeout(function() {
-            hideMessage(wrapper);
-        }, 3000);
-    }
-
-    /**
-     * Reindex option rows after add/remove.
-     *
-     * @param {HTMLElement} wrapper
-     */
-    function reindexOptions(wrapper) {
-        var items = wrapper.querySelectorAll(SELECTORS.optionItem);
-
-        forEachNode(items, function(item, index) {
-            var input;
-            var checkbox;
-            var label;
-
-            item.setAttribute('data-index', index);
-
-            input = item.querySelector(SELECTORS.optionInput);
-            if (input) {
-                input.setAttribute('data-index', index);
-            }
-
-            checkbox = item.querySelector(SELECTORS.defaultCheckbox);
-            if (checkbox) {
-                checkbox.setAttribute('data-index', index);
-                checkbox.id = 'default_' + index;
-            }
-
-            label = item.querySelector('.form-check-label');
-            if (label) {
-                label.setAttribute('for', 'default_' + index);
-            }
-        });
-    }
-
-    /**
-     * Collect clean option values from wrapper.
-     *
-     * @param {HTMLElement} wrapper
-     * @returns {Array}
-     */
-    function getOptionValues(wrapper) {
-        var values = [];
-        var options = wrapper.querySelectorAll(SELECTORS.optionInput);
-
-        forEachNode(options, function(optionInput) {
-            var value = optionInput.value.trim();
-            if (value !== '') {
-                values.push(value);
-            }
-        });
-
-        return values;
-    }
-
-    /**
-     * Collect checked default option values from wrapper.
-     *
-     * @param {HTMLElement} wrapper
-     * @returns {Array}
-     */
-    function getDefaultValues(wrapper) {
-        var selectedDefaults = [];
-        var items = wrapper.querySelectorAll(SELECTORS.optionItem);
-
-        forEachNode(items, function(item) {
-            var input = item.querySelector(SELECTORS.optionInput);
-            var checkbox = item.querySelector(SELECTORS.defaultCheckbox);
-            var value;
-
-            if (!input || !checkbox) {
-                return;
-            }
-
-            value = input.value.trim();
-            if (value !== '' && checkbox.checked) {
-                selectedDefaults.push(value);
-            }
-        });
-
-        return selectedDefaults;
-    }
-
-    /**
-     * Update hidden options field.
-     *
-     * @param {HTMLElement} wrapper
-     * @returns {Array}
-     */
-    function updateOptionsHiddenField(wrapper) {
-        var form = wrapper.closest(SELECTORS.form);
-        var hiddenField = form ? form.querySelector(SELECTORS.optionsInput) : null;
-        var values = getOptionValues(wrapper);
-
-        if (hiddenField) {
-            hiddenField.value = values.join('\n');
-        }
-
-        return values;
-    }
-
-    /**
-     * Update hidden default-value field from checked options.
-     *
-     * @param {HTMLElement} wrapper
-     * @returns {Array}
-     */
-    function updateDefaultHiddenField(wrapper) {
-        var form = wrapper.closest(SELECTORS.form);
-        var hiddenField = form ? form.querySelector(SELECTORS.defaultInput) : null;
-        var values = getDefaultValues(wrapper);
-
-        if (hiddenField) {
-            hiddenField.value = values.join('\n');
-        }
-
-        return values;
-    }
-
-    /**
-     * Sync state after option changes.
-     *
-     * @param {HTMLElement} wrapper
-     */
-    function syncOptionState(wrapper) {
-        var options = updateOptionsHiddenField(wrapper);
-        var defaults = updateDefaultHiddenField(wrapper);
-
-        log(wrapper, 'Synced option state', {
-            optioncount: options.length,
-            defaultcount: defaults.length,
-            options: options,
-            defaults: defaults
-        });
-    }
-
-    /**
-     * Sync a control-driven change.
-     *
-     * @param {HTMLElement} control
-     */
-    function syncFromControl(control) {
-        var wrapper = prepareWrapper(control);
-        var optionItem;
-        var checkbox;
-
-        if (!wrapper) {
-            return;
-        }
-
-        optionItem = control.closest ? control.closest(SELECTORS.optionItem) : null;
-        if (optionItem && control.matches && control.matches(SELECTORS.optionInput) && control.value.trim() === '') {
-            checkbox = optionItem.querySelector(SELECTORS.defaultCheckbox);
-            if (checkbox) {
-                checkbox.checked = false;
-            }
-        }
-
+    messageTimeouts[wrapperKey] = setTimeout(() => {
         hideMessage(wrapper);
-        syncOptionState(wrapper);
-        log(wrapper, 'syncFromControl', {
-            tag: control.tagName,
-            name: control.name || '',
-            value: typeof control.value !== 'undefined' ? control.value : ''
-        });
-    }
+    }, 3000);
+};
 
-    /**
-     * Handle add-option click.
-     *
-     * @param {HTMLElement} addButton
-     */
-    function handleAddOption(addButton) {
-        var wrapper = prepareWrapper(addButton);
-        var container = wrapper ? wrapper.querySelector(SELECTORS.optionsContainer) : null;
-        var optionIndex;
-        var newOption;
-        var newInput;
+/**
+ * Reindex option rows after add/remove.
+ *
+ * @param {HTMLElement} wrapper
+ */
+const reindexOptions = (wrapper) => {
+    wrapper.querySelectorAll(SELECTORS.optionItem).forEach((item, index) => {
+        item.setAttribute('data-index', index);
 
-        if (!wrapper || !container) {
+        const input = item.querySelector(SELECTORS.optionInput);
+        if (input) {
+            input.setAttribute('data-index', index);
+        }
+
+        const checkbox = item.querySelector(SELECTORS.defaultCheckbox);
+        if (checkbox) {
+            checkbox.setAttribute('data-index', index);
+            checkbox.id = 'default_' + index;
+        }
+
+        const label = item.querySelector('.form-check-label');
+        if (label) {
+            label.setAttribute('for', 'default_' + index);
+        }
+    });
+};
+
+/**
+ * Collect clean option values from wrapper.
+ *
+ * @param {HTMLElement} wrapper
+ * @returns {Array}
+ */
+const getOptionValues = (wrapper) => {
+    const values = [];
+
+    wrapper.querySelectorAll(SELECTORS.optionInput).forEach((optionInput) => {
+        const value = optionInput.value.trim();
+        if (value !== '') {
+            values.push(value);
+        }
+    });
+
+    return values;
+};
+
+/**
+ * Collect checked default option values from wrapper.
+ *
+ * @param {HTMLElement} wrapper
+ * @returns {Array}
+ */
+const getDefaultValues = (wrapper) => {
+    const selectedDefaults = [];
+
+    wrapper.querySelectorAll(SELECTORS.optionItem).forEach((item) => {
+        const input = item.querySelector(SELECTORS.optionInput);
+        const checkbox = item.querySelector(SELECTORS.defaultCheckbox);
+
+        if (!input || !checkbox) {
             return;
         }
 
-        optionIndex = wrapper.querySelectorAll(SELECTORS.optionItem).length;
-        newOption = createOptionRow(optionIndex, wrapper);
-        container.appendChild(newOption);
-        reindexOptions(wrapper);
-
-        newInput = newOption.querySelector(SELECTORS.optionInput);
-        if (newInput) {
-            newInput.focus();
+        const value = input.value.trim();
+        if (value !== '' && checkbox.checked) {
+            selectedDefaults.push(value);
         }
+    });
 
-        hideMessage(wrapper);
-        syncOptionState(wrapper);
-        log(wrapper, 'Added option row', {newindex: optionIndex});
+    return selectedDefaults;
+};
+
+/**
+ * Update hidden options field.
+ *
+ * @param {HTMLElement} wrapper
+ * @returns {Array}
+ */
+const updateOptionsHiddenField = (wrapper) => {
+    const form = wrapper.closest(SELECTORS.form);
+    const hiddenField = form ? form.querySelector(SELECTORS.optionsInput) : null;
+    const values = getOptionValues(wrapper);
+
+    if (hiddenField) {
+        hiddenField.value = values.join('\n');
     }
 
-    /**
-     * Handle remove-option click.
-     *
-     * @param {HTMLElement} removeButton
-     */
-    function handleRemoveOption(removeButton) {
-        var wrapper = prepareWrapper(removeButton);
-        var optionItem = removeButton.closest ? removeButton.closest(SELECTORS.optionItem) : null;
-        var totalOptions;
+    return values;
+};
 
-        if (!wrapper || !optionItem) {
+/**
+ * Update hidden default-value field from checked options.
+ *
+ * @param {HTMLElement} wrapper
+ * @returns {Array}
+ */
+const updateDefaultHiddenField = (wrapper) => {
+    const form = wrapper.closest(SELECTORS.form);
+    const hiddenField = form ? form.querySelector(SELECTORS.defaultInput) : null;
+    const values = getDefaultValues(wrapper);
+
+    if (hiddenField) {
+        hiddenField.value = values.join('\n');
+    }
+
+    return values;
+};
+
+/**
+ * Sync state after option changes.
+ *
+ * @param {HTMLElement} wrapper
+ */
+const syncOptionState = (wrapper) => {
+    const options = updateOptionsHiddenField(wrapper);
+    const defaults = updateDefaultHiddenField(wrapper);
+
+    log(wrapper, 'Synced option state', {
+        optioncount: options.length,
+        defaultcount: defaults.length,
+        options: options,
+        defaults: defaults,
+    });
+};
+
+/**
+ * Sync a control-driven change.
+ *
+ * @param {HTMLElement} control
+ */
+export const syncFromControl = (control) => {
+    const wrapper = prepareWrapper(control);
+
+    if (!wrapper) {
+        return;
+    }
+
+    const optionItem = control.closest ? control.closest(SELECTORS.optionItem) : null;
+    if (optionItem && control.matches && control.matches(SELECTORS.optionInput) && control.value.trim() === '') {
+        const checkbox = optionItem.querySelector(SELECTORS.defaultCheckbox);
+        if (checkbox) {
+            checkbox.checked = false;
+        }
+    }
+
+    hideMessage(wrapper);
+    syncOptionState(wrapper);
+    log(wrapper, 'syncFromControl', {
+        tag: control.tagName,
+        name: control.name || '',
+        value: typeof control.value !== 'undefined' ? control.value : '',
+    });
+};
+
+/**
+ * Handle add-option click.
+ *
+ * @param {HTMLElement} addButton
+ */
+export const handleAddButton = (addButton) => {
+    const wrapper = prepareWrapper(addButton);
+    const container = wrapper ? wrapper.querySelector(SELECTORS.optionsContainer) : null;
+
+    if (!wrapper || !container) {
+        return;
+    }
+
+    const optionIndex = wrapper.querySelectorAll(SELECTORS.optionItem).length;
+    const newOption = createOptionRow(optionIndex, wrapper);
+    container.appendChild(newOption);
+    reindexOptions(wrapper);
+
+    const newInput = newOption.querySelector(SELECTORS.optionInput);
+    if (newInput) {
+        newInput.focus();
+    }
+
+    hideMessage(wrapper);
+    syncOptionState(wrapper);
+    log(wrapper, 'Added option row', {newindex: optionIndex});
+};
+
+/**
+ * Handle remove-option click.
+ *
+ * @param {HTMLElement} removeButton
+ */
+export const handleRemoveButton = (removeButton) => {
+    const wrapper = prepareWrapper(removeButton);
+    const optionItem = removeButton.closest ? removeButton.closest(SELECTORS.optionItem) : null;
+
+    if (!wrapper || !optionItem) {
+        return;
+    }
+
+    const totalOptions = wrapper.querySelectorAll(SELECTORS.optionInput).length;
+    if (totalOptions <= 2) {
+        showMessage(wrapper, strings.errornotenoughoptions);
+        return;
+    }
+
+    optionItem.remove();
+    reindexOptions(wrapper);
+    syncOptionState(wrapper);
+    log(wrapper, 'Removed option row', {remaining: wrapper.querySelectorAll(SELECTORS.optionInput).length});
+};
+
+/**
+ * Register delegated handlers once.
+ */
+const bindHandlers = () => {
+    if (handlersbound) {
+        return;
+    }
+
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+
+        if (!target || !target.closest) {
             return;
         }
 
-        totalOptions = wrapper.querySelectorAll(SELECTORS.optionInput).length;
-        if (totalOptions <= 2) {
-            showMessage(wrapper, strings.errornotenoughoptions);
+        const addButton = target.closest(SELECTORS.addOptionButton);
+        if (addButton) {
+            event.preventDefault();
+            handleAddButton(addButton);
             return;
         }
 
-        optionItem.remove();
-        reindexOptions(wrapper);
-        syncOptionState(wrapper);
-        log(wrapper, 'Removed option row', {remaining: wrapper.querySelectorAll(SELECTORS.optionInput).length});
-    }
+        const removeButton = target.closest(SELECTORS.removeOptionButton);
+        if (removeButton) {
+            event.preventDefault();
+            handleRemoveButton(removeButton);
+        }
+    });
 
-    /**
-     * Register delegated handlers once.
-     */
-    function bindHandlers() {
-        if (handlersbound) {
+    document.addEventListener('change', (event) => {
+        const target = event.target;
+
+        if (!target || !target.matches) {
             return;
         }
 
-        document.addEventListener('click', function(event) {
-            var target = event.target;
-            var addButton;
-            var removeButton;
+        if (target.matches(SELECTORS.defaultCheckbox) || target.matches(SELECTORS.optionInput)) {
+            syncFromControl(target);
+        }
+    });
 
-            if (!target || !target.closest) {
-                return;
-            }
+    document.addEventListener('input', (event) => {
+        const target = event.target;
 
+        if (!target || !target.matches) {
+            return;
+        }
 
-            addButton = target.closest(SELECTORS.addOptionButton);
-            if (addButton) {
-                event.preventDefault();
-                handleAddOption(addButton);
-                return;
-            }
+        if (target.matches(SELECTORS.optionInput)) {
+            syncFromControl(target);
+        }
+    });
 
-            removeButton = target.closest(SELECTORS.removeOptionButton);
-            if (removeButton) {
-                event.preventDefault();
-                handleRemoveOption(removeButton);
-            }
-        });
+    document.addEventListener('blur', (event) => {
+        const target = event.target;
 
-        document.addEventListener('change', function(event) {
-            var target = event.target;
+        if (!target || !target.matches) {
+            return;
+        }
 
-            if (!target || !target.matches) {
-                return;
-            }
+        if (target.matches(SELECTORS.optionInput)) {
+            syncFromControl(target);
+        }
+    }, true);
 
-            if (target.matches(SELECTORS.defaultCheckbox) || target.matches(SELECTORS.optionInput)) {
-                syncFromControl(target);
-            }
-        });
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
 
-        document.addEventListener('input', function(event) {
-            var target = event.target;
+        if (!form || !form.matches || !form.matches(SELECTORS.form)) {
+            return;
+        }
 
-            if (!target || !target.matches) {
-                return;
-            }
-
-            if (target.matches(SELECTORS.optionInput)) {
-                syncFromControl(target);
-            }
-        });
-
-        document.addEventListener('blur', function(event) {
-            var target = event.target;
-
-            if (!target || !target.matches) {
-                return;
-            }
-
-            if (target.matches(SELECTORS.optionInput)) {
-                syncFromControl(target);
-            }
-        }, true);
-
-        document.addEventListener('submit', function(event) {
-            var form = event.target;
-            var wrappers;
-
-            if (!form || !form.matches || !form.matches(SELECTORS.form)) {
-                return;
-            }
-
-            wrappers = form.querySelectorAll(SELECTORS.wrapper);
-            forEachNode(wrappers, function(wrapper) {
-                applyWrapperConfig(wrapper);
-                syncOptionState(wrapper);
-            });
-        }, true);
-
-        handlersbound = true;
-        log(null, 'Bound delegated handlers');
-    }
-
-    /**
-     * Sync all editors on page.
-     */
-    function syncAllEditors() {
-        var wrappers = document.querySelectorAll(SELECTORS.wrapper);
-        forEachNode(wrappers, function(wrapper) {
+        form.querySelectorAll(SELECTORS.wrapper).forEach((wrapper) => {
             applyWrapperConfig(wrapper);
             syncOptionState(wrapper);
         });
-        log(null, 'syncAllEditors completed', {wrappercount: wrappers.length});
-    }
+    }, true);
 
-    /**
-     * Init module.
-     *
-     * @param {Object} config
-     */
-    function init(config) {
-        applyConfig(config);
-        bindHandlers();
-        log(null, 'options_editor init', config || {});
-        syncAllEditors();
-        window.setTimeout(syncAllEditors, 0);
-    }
+    handlersbound = true;
+    log(null, 'Bound delegated handlers');
+};
 
-    return {
-        init: init,
-        syncFromControl: syncFromControl,
-        handleAddButton: handleAddOption,
-        handleRemoveButton: handleRemoveOption
-    };
-});
+/**
+ * Sync all editors on page.
+ */
+const syncAllEditors = () => {
+    const wrappers = document.querySelectorAll(SELECTORS.wrapper);
+    wrappers.forEach((wrapper) => {
+        applyWrapperConfig(wrapper);
+        syncOptionState(wrapper);
+    });
+    log(null, 'syncAllEditors completed', {wrappercount: wrappers.length});
+};
+
+/**
+ * Init module.
+ *
+ * @param {Object} config
+ */
+export const init = (config) => {
+    applyConfig(config);
+    bindHandlers();
+    log(null, 'options_editor init', config || {});
+    syncAllEditors();
+    window.setTimeout(syncAllEditors, 0);
+};
