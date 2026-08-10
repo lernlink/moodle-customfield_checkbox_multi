@@ -1,0 +1,75 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template customfield_checkbox_multi/options_editor
+
+    Options editor shown on the multi-select custom field configuration form.
+
+    Context variables required for this template:
+    * defaultoptiontext string Label and title used for the "default option" checkboxes.
+    * errornotenoughoptions string Message shown when the last two option rows cannot be removed.
+    * addoptions string Label of the button adding a new option row.
+    * options array List of option rows.
+      * index int Zero based position of the row.
+      * value string Current option text.
+      * checked bool Whether the option is pre-selected by default.
+
+    Example context (json):
+    {
+        "defaultoptiontext": "Default option",
+        "errornotenoughoptions": "You must provide at least two options.",
+        "addoptions": "Add options",
+        "options": [
+            {"index": 0, "value": "Option A", "checked": true},
+            {"index": 1, "value": "Option B", "checked": false}
+        ]
+    }
+}}
+<div class="customfield-checkbox-multi-wrapper"
+     data-defaultoptiontitle="{{defaultoptiontext}}"
+     data-defaultoptionlabel="{{defaultoptiontext}}"
+     data-errornotenoughoptions="{{errornotenoughoptions}}">
+    <div class="customfield-checkbox-multi-options-container">
+        {{#options}}
+            <div class="option-item customfield-checkbox-multi-option-item" data-index="{{index}}">
+                <div class="form-check customfield-checkbox-multi-check">
+                    <input type="checkbox"
+                           class="form-check-input default-checkbox"
+                           id="default_{{index}}"
+                           data-index="{{index}}"
+                           title="{{defaultoptiontext}}"
+                           {{#checked}}checked{{/checked}}>
+                    <label class="form-check-label accesshide" for="default_{{index}}">{{defaultoptiontext}}</label>
+                </div>
+                <input type="text"
+                       class="form-control option-input customfield-checkbox-multi-option-input"
+                       data-index="{{index}}"
+                       name="configdata_options_ui[]"
+                       value="{{value}}">
+                <button type="button" class="btn btn-danger btn-sm remove-option customfield-checkbox-multi-remove-option">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        {{/options}}
+    </div>
+    <div class="text-danger small customfield-checkbox-multi-message"></div>
+    <div class="customfield-checkbox-multi-actions">
+        <button type="button" class="btn btn-secondary btn-sm customfield-checkbox-multi-add-option">
+            <i class="fa fa-plus"></i> {{addoptions}}
+        </button>
+    </div>
+</div>

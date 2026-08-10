@@ -42,6 +42,8 @@ class field_controller extends \core_customfield\field_controller {
      */
     #[\Override]
     public function config_form_definition(\MoodleQuickForm $mform) {
+        global $OUTPUT;
+
         $mform->addElement(
             'header',
             'header_specificsettings',
@@ -80,48 +82,22 @@ class field_controller extends \core_customfield\field_controller {
             $mform->setDefault('configdata[defaultvalue]', implode("\n", $defaultarray));
         }
 
-        $alloptionshtml = '<div' . $this->html_attributes([
-            'class' => 'customfield-checkbox-multi-wrapper',
-            'data-defaultoptiontitle' => $defaultoptiontext,
-            'data-defaultoptionlabel' => $defaultoptiontext,
-            'data-errornotenoughoptions' => get_string('errornotenoughoptions', 'customfield_checkbox_multi'),
-        ]) . '>';
-        $alloptionshtml .= '<div class="customfield-checkbox-multi-options-container">';
-
+        $optionrows = [];
         for ($i = 0; $i < $optioncount; $i++) {
             $optiontext = $submittedoptions[$i] ?? '';
-            $optionvalue = s($optiontext);
-            $isdefault = in_array($optiontext, $defaultarray, true) ? ' checked' : '';
-            $defaultoptiontitle = s($defaultoptiontext);
-
-            $alloptionshtml .= '<div class="option-item customfield-checkbox-multi-option-item" data-index="' . $i . '">';
-            $alloptionshtml .= '<div class="form-check customfield-checkbox-multi-check">';
-            $alloptionshtml .= '<input type="checkbox" class="form-check-input default-checkbox"';
-            $alloptionshtml .= ' id="default_' . $i . '"' . $isdefault;
-            $alloptionshtml .= ' data-index="' . $i . '"';
-            $alloptionshtml .= ' title="' . $defaultoptiontitle . '" />';
-            $alloptionshtml .= '<label class="form-check-label accesshide" for="default_' . $i . '">';
-            $alloptionshtml .= $defaultoptiontitle;
-            $alloptionshtml .= '</label>';
-            $alloptionshtml .= '</div>';
-
-            $alloptionshtml .= '<input type="text" class="form-control option-input customfield-checkbox-multi-option-input" ';
-            $alloptionshtml .= 'data-index="' . $i . '" name="configdata_options_ui[]" value="' . $optionvalue . '" />';
-            $alloptionshtml .= '<button type="button" class="btn btn-danger btn-sm remove-option ';
-            $alloptionshtml .= 'customfield-checkbox-multi-remove-option">';
-            $alloptionshtml .= '<i class="fa fa-times"></i>';
-            $alloptionshtml .= '</button>';
-            $alloptionshtml .= '</div>';
+            $optionrows[] = [
+                'index' => $i,
+                'value' => $optiontext,
+                'checked' => in_array($optiontext, $defaultarray, true),
+            ];
         }
 
-        $alloptionshtml .= '</div>';
-        $alloptionshtml .= '<div class="text-danger small customfield-checkbox-multi-message"></div>';
-        $alloptionshtml .= '<div class="customfield-checkbox-multi-actions">';
-        $alloptionshtml .= '<button type="button" class="btn btn-secondary btn-sm customfield-checkbox-multi-add-option">';
-        $alloptionshtml .= '<i class="fa fa-plus"></i> ' . get_string('addoptions', 'customfield_checkbox_multi');
-        $alloptionshtml .= '</button>';
-        $alloptionshtml .= '</div>';
-        $alloptionshtml .= '</div>';
+        $alloptionshtml = $OUTPUT->render_from_template('customfield_checkbox_multi/options_editor', [
+            'defaultoptiontext' => $defaultoptiontext,
+            'errornotenoughoptions' => get_string('errornotenoughoptions', 'customfield_checkbox_multi'),
+            'addoptions' => get_string('addoptions', 'customfield_checkbox_multi'),
+            'options' => $optionrows,
+        ]);
 
         $requiredsuffix = ' (' . get_string('required') . ')';
         $mform->addElement(
@@ -307,19 +283,5 @@ class field_controller extends \core_customfield\field_controller {
         }
 
         return $errors;
-    }
-
-    /**
-     * Convert attribute array into HTML attributes.
-     *
-     * @param array $attributes
-     * @return string
-     */
-    private function html_attributes(array $attributes): string {
-        $html = '';
-        foreach ($attributes as $name => $value) {
-            $html .= ' ' . $name . '="' . s((string)$value) . '"';
-        }
-        return $html;
     }
 }
