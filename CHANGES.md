@@ -10,7 +10,7 @@ Addresses the review findings reported in issues #1 and #3–#6.
 
 ### Improvements
 - `amd/src/options_editor.js` rewritten as an ES module, as expected by the Moodle JS build (#1).
-- The options editor AMD module is loaded only from the field configuration form; the global `before_standard_head_html_generation` hook, `db/hooks.php` and `lib.php` were removed (#5).
+- Removed the dead `config_form_dynamic_requirements()` method, which core never calls, and documented why the `before_standard_head_html_generation` hook is required (#5).
 - Configuration UI markup moved from `field_controller::config_form_definition()` into `templates/options_editor.mustache` (#6).
 - Language strings are plain `$string['id'] = 'value';` assignments without concatenation (#4).
 - GitHub Actions CI (`.github/workflows/moodle-ci.yml`) runs the Moodle plugin checks on every push (#2).

@@ -108,17 +108,11 @@ class field_controller extends \core_customfield\field_controller {
         );
         $mform->addHelpButton('options_label', 'menuoptions', 'customfield_checkbox_multi');
 
-        // Moodle 4.5 does not always call config_form_dynamic_requirements() for this form,
-        // so register the AMD module while building the form as well.
-        $this->initialise_options_editor();
-    }
-
-    /**
-     * Register dynamic-form JavaScript requirements.
-     *
-     * @param \MoodleQuickForm $mform
-     */
-    public function config_form_dynamic_requirements(\MoodleQuickForm $mform): void {
+        // This covers the form when it is rendered as a normal page. When it is opened
+        // in a modal, core_customfield\field_config_form is a dynamic form and JavaScript
+        // requirements are only collected around $form->render(), which happens after
+        // definition(), so the requirement registered here never reaches the browser.
+        // The before_standard_head_html_generation hook loads the module for that case.
         $this->initialise_options_editor();
     }
 
