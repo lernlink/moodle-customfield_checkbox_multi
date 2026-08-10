@@ -33,11 +33,13 @@ Feature: Managers can manage course custom fields multi-select
       | Test field | Category for test | checkbox_multi | testfield | {"options":"Option A\nOption B\nOption C"} |
     And I am on "Course 1" course homepage
     And I navigate to "Settings" in current page administration
+    And I expand all fieldsets
     When I set the field "customfield_testfield[0]" to "1"
     And I set the field "customfield_testfield[2]" to "1"
     And I press "Save and display"
     And I am on "Course 1" course homepage
     And I navigate to "Settings" in current page administration
+    And I expand all fieldsets
     Then the field "customfield_testfield[0]" matches value "1"
     And the field "customfield_testfield[1]" matches value ""
     And the field "customfield_testfield[2]" matches value "1"
@@ -49,6 +51,7 @@ Feature: Managers can manage course custom fields multi-select
       | Test field | Category for test | checkbox_multi | testfield | {"options":"Option A\nOption B","required":1} |
     And I am on "Course 1" course homepage
     And I navigate to "Settings" in current page administration
+    And I expand all fieldsets
     When I press "Save and display"
     Then I should see "Please select at least one option."
     And I set the field "customfield_testfield[0]" to "1"
