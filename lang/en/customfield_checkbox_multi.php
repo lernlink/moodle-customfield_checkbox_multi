@@ -28,10 +28,8 @@ $string['addoptions'] = 'Add options';
 $string['contactadminforchange'] = 'Please contact the administrator for this change.';
 $string['default_option'] = 'Default option';
 $string['defaultvalue'] = 'Default values';
-$string['defaultvalue_help'] = 'Enter default values, one per line. These options will be pre-selected when creating new '
-    . 'instances. For backward compatibility, you can also use comma-separated values.';
-$string['defaultvalue_note'] = 'You can enter default values one per line, or use comma-separated values for backward '
-    . 'compatibility.';
+$string['defaultvalue_help'] = 'Enter default values, one per line. These options will be pre-selected when creating new instances. For backward compatibility, you can also use comma-separated values.';
+$string['defaultvalue_note'] = 'You can enter default values one per line, or use comma-separated values for backward compatibility.';
 $string['errorconfigunique'] = 'The multiselect field cannot be defined as unique.';
 $string['errordefaultvaluenotinlist'] = 'The default value "{$a}" is not one of the available options.';
 $string['errorduplicateoptions'] = 'Duplicate options are not allowed';
@@ -43,6 +41,5 @@ $string['menuoptionsdesc'] = 'Enter one option per field. You can add or remove 
 $string['option'] = 'Option';
 $string['pluginname'] = 'Multi-select';
 $string['pluginname_help'] = 'Store multiple values by selecting one or more checkboxes.';
-$string['privacy:metadata'] = 'The Multi-select field type plugin doesn\'t store any personal data; it uses tables '
-    . 'defined in core.';
+$string['privacy:metadata'] = 'The Multi-select field type plugin doesn\'t store any personal data; it uses tables defined in core.';
 $string['specificsettings'] = 'Multi-select field settings';
