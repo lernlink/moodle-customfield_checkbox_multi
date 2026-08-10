@@ -122,17 +122,18 @@ class data_controller extends \core_customfield\data_controller {
 
         $elementname = $this->get_form_element_name();
         $submittedvalues = $data[$elementname] ?? [];
+        $fieldoptions = $this->get_field()->get_options();
         $hasselection = false;
 
+        // Only checked entries pointing at a known option count, so that validation
+        // agrees with what instance_form_save() actually stores.
         if (is_array($submittedvalues)) {
-            foreach ($submittedvalues as $checked) {
-                if (!empty($checked)) {
+            foreach ($submittedvalues as $key => $checked) {
+                if (!empty($checked) && isset($fieldoptions[$key])) {
                     $hasselection = true;
                     break;
                 }
             }
-        } else if (!empty($submittedvalues)) {
-            $hasselection = true;
         }
 
         if (!$hasselection) {

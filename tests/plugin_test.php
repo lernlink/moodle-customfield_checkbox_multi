@@ -201,6 +201,30 @@ final class plugin_test extends \advanced_testcase {
     }
 
     /**
+     * Test required validation rejects submissions that would be discarded on save.
+     */
+    public function test_instance_form_required_validation_rejects_unknown_option_keys(): void {
+        $data = $this->get_data_controller(2);
+        $elementname = $data->get_form_element_name();
+
+        // A checkbox key outside the configured options is dropped by instance_form_save(),
+        // so it must not satisfy the required rule either.
+        $errors = $data->instance_form_validation([$elementname => [99 => 1]], []);
+        $this->assertArrayHasKey($elementname . '[0]', $errors);
+
+        // The same applies to a scalar submission, which never yields a stored value.
+        $errors = $data->instance_form_validation([$elementname => '1'], []);
+        $this->assertArrayHasKey($elementname . '[0]', $errors);
+
+        // Unchecked known keys mixed with an unknown key are still an empty selection.
+        $errors = $data->instance_form_validation([$elementname => [0 => 0, 99 => 1]], []);
+        $this->assertArrayHasKey($elementname . '[0]', $errors);
+
+        $data->instance_form_save((object)[$elementname => [99 => 1]]);
+        $this->assertSame('[]', $data->get_value());
+    }
+
+    /**
      * Test default values are mapped to option indexes.
      */
     public function test_default_value_mapping(): void {
