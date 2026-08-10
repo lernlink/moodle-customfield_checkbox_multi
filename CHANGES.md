@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.9.4 (2026-08-10)
+
+Addresses the review findings reported in issues #1 and #3–#6.
+
+### Bug fixes
+- Required-field validation now counts only checked entries whose key exists in the field options, so it agrees with what `instance_form_save()` stores (#3).
+- `amd/build/options_editor.min.js` is a real Grunt build again, with a source map, instead of an unminified copy of the source (#1).
+
+### Improvements
+- `amd/src/options_editor.js` rewritten as an ES module, as expected by the Moodle JS build (#1).
+- The options editor AMD module is loaded only from the field configuration form; the global `before_standard_head_html_generation` hook, `db/hooks.php` and `lib.php` were removed (#5).
+- Configuration UI markup moved from `field_controller::config_form_definition()` into `templates/options_editor.mustache` (#6).
+- Language strings are plain `$string['id'] = 'value';` assignments without concatenation (#4).
+- GitHub Actions CI (`.github/workflows/moodle-ci.yml`) runs the Moodle plugin checks on every push (#2).
+
 ## v0.9.3 (2026-07-13)
 
 First public release.
